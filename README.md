@@ -1,12 +1,119 @@
-# React + Vite
+# Ranked Decay Tracker
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A web application to track League of Legends ranked decay status across multiple accounts.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Riot Games Authentication**: Sign in with your Riot Games account (OAuth)
+- **Multi-Account Tracking**: Track decay status for multiple accounts across different regions
+- **Countdown Timer**: See at a glance when your next decay will occur
+- **Manual Updates**: Manually input days until decay for each account
 
-## Expanding the ESLint configuration
+## Tech Stack
 
-If you are developing a production application, we recommend using TypeScript and enable type-aware lint rules. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- **Frontend**: React with Vite, Material UI
+- **Backend**: Fastify
+- **Database**: MariaDB
+- **Authentication**: Riot Games OAuth
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js (v16.0.0 or higher)
+- NPM or Yarn
+- MariaDB (v10.5 or higher)
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/riot-decay-tracker.git
+   cd riot-decay-tracker
+   ```
+
+2. Install frontend dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Create a `.env` file in the project root with the following variables:
+   ```
+   # Frontend Environment Variables
+   VITE_API_URL=http://localhost:3001
+   VITE_RIOT_CLIENT_ID=your-riot-client-id
+   
+   # Backend Environment Variables (for backend setup)
+   DATABASE_URL=mysql://username:password@localhost:3306/decaytracker
+   RIOT_CLIENT_ID=your-riot-client-id
+   RIOT_CLIENT_SECRET=your-riot-client-secret
+   JWT_SECRET=your-jwt-secret
+   ```
+
+4. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+5. The application will be available at `http://localhost:3000`
+
+### Backend Setup (Coming Soon)
+
+Instructions for setting up the Fastify backend and MariaDB database will be added as development progresses.
+
+## Project Structure
+
+```
+riot-decay-tracker/
+├── public/              # Static assets
+├── src/                 # Application source code
+│   ├── assets/          # Assets processed by Vite
+│   ├── components/      # React components
+│   │   ├── AccountList.jsx
+│   │   ├── AddAccountDialog.jsx
+│   │   ├── AuthGuard.jsx
+│   │   ├── Dashboard.jsx
+│   │   ├── GlobalDecayCountdown.jsx
+│   │   └── Login.jsx
+│   ├── App.css          # Global styles
+│   ├── App.jsx          # Main App component
+│   ├── main.jsx         # Entry point
+│   └── index.css        # Base styles
+├── .env                 # Environment variables (not committed)
+├── .gitignore           # Git ignore file
+├── index.html           # HTML template
+├── package.json         # Project dependencies
+├── vite.config.js       # Vite configuration
+└── README.md            # This file
+```
+
+## Development Roadmap
+
+- [x] Frontend UI design and implementation
+- [x] Mock login functionality
+- [ ] Backend API with Fastify
+- [ ] Database schema and integration
+- [ ] Riot Games OAuth implementation
+- [ ] Account management features
+- [ ] Deployment pipeline
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgments
+
+- Riot Games for providing the API that makes this tool possible
+- The League of Legends community for the inspiration
+
+## Disclaimer
+
+Ranked Decay Tracker is not endorsed by Riot Games and does not reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games and League of Legends are trademarks or registered trademarks of Riot Games, Inc.
