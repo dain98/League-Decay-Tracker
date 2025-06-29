@@ -1,36 +1,30 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Box, CircularProgress, Typography } from '@mui/material';
+import { useAuth0 } from '@auth0/auth0-react';
 
 const AuthGuard = ({ children }) => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { isAuthenticated, isLoading, error, getAccessTokenSilently } = useAuth0();
 
   useEffect(() => {
-    // Check if user is logged in
-    const checkAuth = () => {
-      try {
-        const user = localStorage.getItem('user');
-        console.log('AuthGuard checking user data:', user);
-        
-        if (user) {
-          setIsAuthenticated(true);
-        } else {
-          setIsAuthenticated(false);
-        }
-      } catch (error) {
-        console.error('Error checking authentication:', error);
-        setIsAuthenticated(false);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    // Debug logging to help diagnose authentication issues
+    console.log('AuthGuard - isAuthenticated:', isAuthenticated);
+    console.log('AuthGuard - isLoading:', isLoading);
+    console.log('AuthGuard - error:', error);
+    
+    // Try to get access token silently to trigger token refresh if needed
+    if (!isLoading && !isAuthenticated) {
+      getAccessTokenSilently({ ignoreCache: false })
+        .then(token => {
+          console.log('AuthGuard - Successfully got access token');
+        })
+        .catch(err => {
+          console.log('AuthGuard - Failed to get access token:', err);
+        });
+    }
+  }, [isAuthenticated, isLoading, error, getAccessTokenSilently]);
 
-    // Add a small delay to simulate auth check
-    const timeoutId = setTimeout(checkAuth, 500);
-    return () => clearTimeout(timeoutId);
-  }, []);
-
+  // Show loading state while Auth0 is initializing
   if (isLoading) {
     return (
       <Box sx={{ 
@@ -48,10 +42,34 @@ const AuthGuard = ({ children }) => {
     );
   }
 
+  // Handle Auth0 errors
+  if (error) {
+    console.error('AuthGuard - Authentication error:', error);
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: 'column',
+        justifyContent: 'center', 
+        alignItems: 'center',
+        height: '100vh'
+      }}>
+        <Typography variant="h6" color="error" sx={{ mb: 2 }}>
+          Authentication Error
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {error.message}
+        </Typography>
+      </Box>
+    );
+  }
+
+  // Redirect to login if not authenticated
   if (!isAuthenticated) {
+    console.log('AuthGuard - User not authenticated, redirecting to login');
     return <Navigate to="/login" replace />;
   }
 
+  console.log('AuthGuard - User authenticated, rendering children');
   return children;
 };
 

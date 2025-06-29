@@ -1,102 +1,167 @@
 import React from 'react';
 import { 
-  List, 
-  ListItem, 
-  ListItemText, 
-  ListItemAvatar, 
-  ListItemSecondaryAction,
-  Avatar, 
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   IconButton, 
   Chip,
-  Paper,
+  Box,
   Typography,
-  Grid,
-  Divider
+  Tooltip,
+  CircularProgress
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import WarningIcon from '@mui/icons-material/Warning';
-import GamepadIcon from '@mui/icons-material/Gamepad';
-import { format } from 'date-fns';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import { styled } from '@mui/material/styles';
 
-const AccountList = ({ accounts, onDelete }) => {
-  // Debug
-  console.log('AccountList received accounts:', accounts);
+// Styled components
+const StyledTableRow = styled(TableRow)(({ theme }) => ({
+  '&:nth-of-type(odd)': {
+    backgroundColor: 'rgba(10, 50, 60, 0.1)',
+  },
+  '&:hover': {
+    backgroundColor: 'rgba(10, 50, 60, 0.2)',
+  },
+}));
 
-  if (!accounts || accounts.length === 0) {
+const DecayChip = styled(Chip)(({ theme, severity }) => ({
+  backgroundColor: severity === 'critical' ? '#d32f2f' : 
+                   severity === 'warning' ? '#ed6c02' : 
+                   severity === 'info' ? '#0288d1' : '#2e7d32',
+  color: 'white',
+  fontWeight: 'bold',
+}));
+
+const AccountList = ({ accounts, onDelete, onRefresh, isLoading }) => {
+  const getDecaySeverity = (daysRemaining) => {
+    if (daysRemaining <= 3) return 'critical';
+    if (daysRemaining <= 7) return 'warning';
+    if (daysRemaining <= 14) return 'info';
+    return 'success';
+  };
+
+  const getDecayLabel = (daysRemaining) => {
+    if (daysRemaining <= 0) return 'DECAYED';
+    if (daysRemaining === 1) return '1 DAY';
+    return `${daysRemaining} DAYS`;
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Never';
+    const date = new Date(dateString);
+    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const formatRank = (account) => {
+    if (!account.tier || !account.rank) return 'Unranked';
+    return `${account.tier} ${account.rank} (${account.leaguePoints || 0} LP)`;
+  };
+
+  if (accounts.length === 0) {
     return (
-      <Paper sx={{ p: 3, textAlign: 'center' }}>
-        <Typography variant="body1">
-          No accounts added yet. Click "Add Account" to get started!
+      <Paper sx={{ p: 4, textAlign: 'center' }}>
+        <Typography variant="h6" color="text.secondary">
+          No accounts found
         </Typography>
       </Paper>
     );
   }
 
-  const getDecayStatusColor = (daysRemaining) => {
-    if (daysRemaining <= 3) return 'error';
-    if (daysRemaining <= 7) return 'warning';
-    return 'success';
-  };
-
   return (
-    <Paper sx={{ mb: 4 }}>
-      <List>
-        {accounts.map((account, index) => (
-          <React.Fragment key={account.id}>
-            {index > 0 && <Divider variant="inset" component="li" />}
-            <ListItem alignItems="flex-start">
-              <ListItemAvatar>
-                <Avatar sx={{ bgcolor: getDecayStatusColor(account.decay_days_remaining) }}>
-                  {account.decay_days_remaining <= 3 ? <WarningIcon /> : <GamepadIcon />}
-                </Avatar>
-              </ListItemAvatar>
-              
-              <ListItemText
-                primary={
-                  <Typography variant="subtitle1" component="span">
-                    {account.game_name}
-                    <Typography component="span" variant="caption" sx={{ ml: 1, color: 'grey.500' }}>
-                      #{account.tag_line}
+    <TableContainer component={Paper} elevation={3}>
+      <Table>
+        <TableHead>
+          <TableRow sx={{ backgroundColor: 'rgba(10, 50, 60, 0.3)' }}>
+            <TableCell sx={{ fontWeight: 'bold' }}>Account</TableCell>
+            <TableCell sx={{ fontWeight: 'bold' }}>Region</TableCell>
+            <TableCell sx={{ fontWeight: 'bold' }}>Current Rank</TableCell>
+            <TableCell sx={{ fontWeight: 'bold' }}>Decay Status</TableCell>
+            <TableCell sx={{ fontWeight: 'bold' }}>Last Updated</TableCell>
+            <TableCell sx={{ fontWeight: 'bold' }}>Actions</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {accounts.map((account) => {
+            const severity = getDecaySeverity(account.remainingDecayDays);
+            const decayLabel = getDecayLabel(account.remainingDecayDays);
+            
+            return (
+              <StyledTableRow key={account._id}>
+                <TableCell>
+                  <Box>
+                    <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                      {account.gameName}#{account.tagLine}
                     </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {account.riotId}
+                    </Typography>
+                  </Box>
+                </TableCell>
+                
+                <TableCell>
+                  <Chip 
+                    label={account.region} 
+                    size="small" 
+                    variant="outlined"
+                    sx={{ fontWeight: 'bold' }}
+                  />
+                </TableCell>
+                
+                <TableCell>
+                  <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                    {formatRank(account)}
                   </Typography>
-                }
-                secondary={
-                  <Grid container spacing={1} sx={{ mt: 0.5 }}>
-                    <Grid item>
-                      <Chip 
+                </TableCell>
+                
+                <TableCell>
+                  <DecayChip 
+                    label={decayLabel}
+                    severity={severity}
                         size="small" 
-                        label={`Region: ${account.region}`} 
-                        variant="outlined" 
-                      />
-                    </Grid>
-                    <Grid item>
-                      <Chip 
+                  />
+                </TableCell>
+                
+                <TableCell>
+                  <Typography variant="body2" color="text.secondary">
+                    {formatDate(account.lastUpdated)}
+                  </Typography>
+                </TableCell>
+                
+                <TableCell>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Tooltip title="Refresh account data">
+                      <IconButton 
                         size="small" 
-                        label={`Updated: ${format(new Date(account.last_updated), 'MMM d, yyyy')}`}
-                        variant="outlined" 
-                      />
-                    </Grid>
-                    <Grid item>
-                      <Chip 
+                        color="primary"
+                        onClick={() => onRefresh(account._id)}
+                        disabled={isLoading}
+                      >
+                        <RefreshIcon />
+                      </IconButton>
+                    </Tooltip>
+                    
+                    <Tooltip title="Delete account">
+                      <IconButton 
                         size="small" 
-                        color={getDecayStatusColor(account.decay_days_remaining)}
-                        label={`${account.decay_days_remaining} days until decay`}
-                      />
-                    </Grid>
-                  </Grid>
-                }
-              />
-              
-              <ListItemSecondaryAction>
-                <IconButton edge="end" aria-label="delete" onClick={() => onDelete(account.id)}>
+                        color="error"
+                        onClick={() => onDelete(account._id)}
+                        disabled={isLoading}
+                      >
                   <DeleteIcon />
                 </IconButton>
-              </ListItemSecondaryAction>
-            </ListItem>
-          </React.Fragment>
-        ))}
-      </List>
-    </Paper>
+                    </Tooltip>
+                  </Box>
+                </TableCell>
+              </StyledTableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </TableContainer>
   );
 };
 

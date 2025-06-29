@@ -1,6 +1,8 @@
 import React from 'react';
 import { Box, Button, Typography, Paper } from '@mui/material';
 import { styled } from '@mui/material/styles';
+import { useAuth0 } from '@auth0/auth0-react';
+import { setAuthToken } from '../services/api.js';
 
 // Styled components
 const PageContainer = styled(Box)({
@@ -28,7 +30,7 @@ const LoginContainer = styled(Paper)(({ theme }) => ({
   borderRadius: theme.spacing(2),
 }));
 
-const RiotButton = styled(Button)(({ theme }) => ({
+const Auth0Button = styled(Button)(({ theme }) => ({
   marginTop: theme.spacing(3),
   backgroundColor: '#d13639',
   padding: theme.spacing(1.5, 4),
@@ -38,19 +40,46 @@ const RiotButton = styled(Button)(({ theme }) => ({
 }));
 
 const Login = () => {
-  const handleRiotLogin = () => {
-    // In a real implementation, redirect to Riot OAuth URL
-    // Temporarily disabled until OAuth is set up
-    alert('Riot OAuth login is not set up yet. Please use the admin login for development.');
-    
-    // Commented out until OAuth is verified
-    // const riotOAuthUrl = 'https://auth.riotgames.com/authorize' + 
-    //   '?client_id=YOUR_CLIENT_ID' + 
-    //   '&redirect_uri=YOUR_REDIRECT_URI' + 
-    //   '&response_type=code' +
-    //   '&scope=openid';
-    // window.location.href = riotOAuthUrl;
+  const { loginWithRedirect, isAuthenticated, isLoading, getAccessTokenSilently } = useAuth0();
+
+  const handleAuth0Login = async () => {
+    try {
+      // Get the access token after login
+      const token = await getAccessTokenSilently();
+      setAuthToken(token);
+      loginWithRedirect();
+    } catch (error) {
+      console.error('Error getting access token:', error);
+      // Fallback to regular login if token retrieval fails
+      loginWithRedirect();
+    }
   };
+
+  // If already authenticated, redirect to dashboard
+  if (isAuthenticated) {
+    // Ensure we have the token stored
+    getAccessTokenSilently()
+      .then(token => {
+        setAuthToken(token);
+        window.location.href = '/dashboard';
+      })
+      .catch(error => {
+        console.error('Error getting access token:', error);
+        window.location.href = '/dashboard';
+      });
+    return null;
+  }
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <PageContainer>
+        <LoginContainer elevation={6}>
+          <Typography variant="h6">Loading...</Typography>
+        </LoginContainer>
+      </PageContainer>
+    );
+  }
 
   return (
     <PageContainer>
@@ -64,47 +93,26 @@ const Login = () => {
         </Typography>
         
         <Box sx={{ width: '100%', textAlign: 'center' }}>
-          <RiotButton 
+          <Auth0Button 
             variant="contained" 
             size="large"
-            onClick={handleRiotLogin}
+            onClick={handleAuth0Login}
             startIcon={
               <Box 
                 component="img" 
-                src="https://cdnjs.cloudflare.com/ajax/libs/simple-icons/6.0.0/riotgames.svg" 
-                alt="Riot Games Logo"
+                src="https://cdn.auth0.com/styleguide/components/1.0.8/media/logos/img/badge.png" 
+                alt="Auth0 Logo"
                 sx={{ width: 20, height: 20, filter: 'invert(1)' }}
               />
             }
             fullWidth
           >
-            SIGN IN WITH RIOT GAMES
-          </RiotButton>
+            SIGN IN WITH AUTH0
+          </Auth0Button>
           
           <Typography variant="caption" sx={{ display: 'block', mt: 2, mb: 3, color: 'grey.400' }}>
-            We'll only access your basic account information
+            Secure authentication powered by Auth0
           </Typography>
-          
-          {/* Temporary admin login for development */}
-          <Button 
-            variant="outlined" 
-            color="secondary"
-            size="medium"
-            onClick={() => {
-              // Set mock user data in localStorage
-              localStorage.setItem('user', JSON.stringify({
-                username: 'Admin',
-                riot_id: 'Admin#DEV',
-                isAdmin: true
-              }));
-              // Redirect to dashboard
-              window.location.href = '/dashboard';
-            }}
-            fullWidth
-            sx={{ mt: 1 }}
-          >
-            Login as Admin (Dev Only)
-          </Button>
         </Box>
       </LoginContainer>
     </PageContainer>

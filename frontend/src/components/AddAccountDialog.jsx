@@ -1,180 +1,225 @@
 import React, { useState } from 'react';
 import {
-  Button,
   Dialog,
-  DialogActions,
-  DialogContent,
   DialogTitle,
+  DialogContent,
+  DialogActions,
   TextField,
-  MenuItem,
+  Button,
   FormControl,
   InputLabel,
   Select,
-  FormHelperText,
-  Grid
+  MenuItem,
+  Box,
+  Typography,
+  Alert,
+  CircularProgress
 } from '@mui/material';
 
 const regions = [
-  { value: 'NA', label: 'North America' },
-  { value: 'EUW', label: 'Europe West' },
-  { value: 'EUN', label: 'Europe Nordic & East' },
-  { value: 'KR', label: 'Korea' },
-  { value: 'BR', label: 'Brazil' },
-  { value: 'JP', label: 'Japan' },
-  { value: 'RU', label: 'Russia' },
-  { value: 'OCE', label: 'Oceania' },
-  { value: 'TR', label: 'Turkey' },
-  { value: 'LAS', label: 'Latin America South' },
-  { value: 'LAN', label: 'Latin America North' },
+  { value: 'NA1', label: 'North America (NA1)' },
+  { value: 'EUW1', label: 'Europe West (EUW1)' },
+  { value: 'EUN1', label: 'Europe Nordic & East (EUN1)' },
+  { value: 'KR', label: 'Korea (KR)' },
+  { value: 'BR1', label: 'Brazil (BR1)' },
+  { value: 'LA1', label: 'Latin America North (LA1)' },
+  { value: 'LA2', label: 'Latin America South (LA2)' },
+  { value: 'OC1', label: 'Oceania (OC1)' },
+  { value: 'TR1', label: 'Turkey (TR1)' },
+  { value: 'RU', label: 'Russia (RU)' },
+  { value: 'JP1', label: 'Japan (JP1)' },
+  { value: 'PH2', label: 'Philippines (PH2)' },
+  { value: 'SG2', label: 'Singapore (SG2)' },
+  { value: 'TH2', label: 'Thailand (TH2)' },
+  { value: 'TW2', label: 'Taiwan (TW2)' },
+  { value: 'VN2', label: 'Vietnam (VN2)' },
 ];
 
-const AddAccountDialog = ({ open, onClose, onAdd }) => {
+const AddAccountDialog = ({ open, onClose, onAdd, isLoading }) => {
   const [formData, setFormData] = useState({
-    game_name: '',
-    tag_line: '',
-    region: '',
-    decay_days_remaining: '',
+    gameName: '',
+    tagLine: '',
+    region: 'NA1'
   });
-
   const [errors, setErrors] = useState({});
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value
-    });
-    
-    // Clear error when field is edited
-    if (errors[name]) {
-      setErrors({
-        ...errors,
-        [name]: null
-      });
-    }
-  };
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const validateForm = () => {
     const newErrors = {};
     
-    if (!formData.game_name.trim()) {
-      newErrors.game_name = 'Game name is required';
+    // Game name validation
+    if (!formData.gameName.trim()) {
+      newErrors.gameName = 'Game name is required';
+    } else if (formData.gameName.length < 3) {
+      newErrors.gameName = 'Game name must be at least 3 characters';
+    } else if (formData.gameName.length > 16) {
+      newErrors.gameName = 'Game name must be 16 characters or less';
+    } else if (!/^[a-zA-Z0-9\s]+$/.test(formData.gameName)) {
+      newErrors.gameName = 'Game name can only contain letters, numbers, and spaces';
     }
     
-    if (!formData.tag_line.trim()) {
-      newErrors.tag_line = 'Tag line is required';
-    }
-    
-    if (!formData.region) {
-      newErrors.region = 'Region is required';
-    }
-    
-    const decayDays = parseInt(formData.decay_days_remaining);
-    if (isNaN(decayDays) || decayDays < 1 || decayDays > 30) {
-      newErrors.decay_days_remaining = 'Enter a valid number between 1-30';
+    // Tag line validation
+    if (!formData.tagLine.trim()) {
+      newErrors.tagLine = 'Tag line is required';
+    } else if (formData.tagLine.length < 3) {
+      newErrors.tagLine = 'Tag line must be at least 3 characters';
+    } else if (formData.tagLine.length > 5) {
+      newErrors.tagLine = 'Tag line must be 5 characters or less';
+    } else if (!/^[a-zA-Z0-9]+$/.test(formData.tagLine)) {
+      newErrors.tagLine = 'Tag line can only contain letters and numbers';
     }
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = () => {
-    if (validateForm()) {
-      onAdd({
-        ...formData,
-        decay_days_remaining: parseInt(formData.decay_days_remaining),
-        riot_id: `${formData.game_name}#${formData.tag_line}`
-      });
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    try {
+      // Create the account data in the format expected by the backend
+      const accountData = {
+        gameName: formData.gameName.trim(),
+        tagLine: formData.tagLine.trim(),
+        region: formData.region,
+        riotId: `${formData.gameName.trim()}#${formData.tagLine.trim()}`
+      };
+
+      await onAdd(accountData);
       
       // Reset form
       setFormData({
-        game_name: '',
-        tag_line: '',
-        region: '',
-        decay_days_remaining: '',
+        gameName: '',
+        tagLine: '',
+        region: 'NA1'
       });
+      setErrors({});
+      
+    } catch (error) {
+      console.error('Error adding account:', error);
+      // Error handling is done in the parent component
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleClose = () => {
+    if (!isSubmitting) {
+      setFormData({
+        gameName: '',
+        tagLine: '',
+        region: 'NA1'
+      });
+      setErrors({});
+      onClose();
+    }
+  };
+
+  const handleInputChange = (field) => (event) => {
+    const value = event.target.value;
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({
+        ...prev,
+        [field]: ''
+      }));
     }
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Add New Account</DialogTitle>
+    <Dialog 
+      open={open} 
+      onClose={handleClose}
+      maxWidth="sm"
+      fullWidth
+      disableEscapeKeyDown={isSubmitting}
+    >
+      <DialogTitle>
+        <Typography variant="h6" component="div">
+          Add League Account
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Enter your League of Legends account details to start tracking decay
+        </Typography>
+      </DialogTitle>
       
+      <form onSubmit={handleSubmit}>
       <DialogContent>
-        <Grid container spacing={2} sx={{ mt: 0.5 }}>
-          <Grid item xs={12} sm={7}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             <TextField
-              fullWidth
               label="Game Name"
-              name="game_name"
-              value={formData.game_name}
-              onChange={handleChange}
-              error={!!errors.game_name}
-              helperText={errors.game_name}
-              margin="normal"
-            />
-          </Grid>
-          
-          <Grid item xs={12} sm={5}>
-            <TextField
+              value={formData.gameName}
+              onChange={handleInputChange('gameName')}
+              error={!!errors.gameName}
+              helperText={errors.gameName || 'Your in-game name (3-16 characters)'}
+              disabled={isSubmitting}
               fullWidth
-              label="Tag Line"
-              name="tag_line"
-              value={formData.tag_line}
-              onChange={handleChange}
-              error={!!errors.tag_line}
-              helperText={errors.tag_line}
-              margin="normal"
-              placeholder="NA1"
+              required
             />
-          </Grid>
-          
-          <Grid item xs={12} sm={6}>
-            <FormControl fullWidth margin="normal" error={!!errors.region}>
+            
+            <TextField
+              label="Tag Line"
+              value={formData.tagLine}
+              onChange={handleInputChange('tagLine')}
+              error={!!errors.tagLine}
+              helperText={errors.tagLine || 'Your tag line (3-5 characters)'}
+              disabled={isSubmitting}
+              fullWidth
+              required
+            />
+            
+            <FormControl fullWidth disabled={isSubmitting}>
               <InputLabel>Region</InputLabel>
               <Select
-                name="region"
                 value={formData.region}
-                onChange={handleChange}
+                onChange={handleInputChange('region')}
                 label="Region"
               >
-                {regions.map(region => (
+                {regions.map((region) => (
                   <MenuItem key={region.value} value={region.value}>
-                    {region.label} ({region.value})
+                    {region.label}
                   </MenuItem>
                 ))}
               </Select>
-              {errors.region && <FormHelperText>{errors.region}</FormHelperText>}
             </FormControl>
-          </Grid>
-          
-          <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              label="Days Until Decay"
-              name="decay_days_remaining"
-              type="number"
-              value={formData.decay_days_remaining}
-              onChange={handleChange}
-              error={!!errors.decay_days_remaining}
-              helperText={errors.decay_days_remaining || "Enter days until ranked decay"}
-              margin="normal"
-              InputProps={{ inputProps: { min: 1, max: 30 } }}
-            />
-          </Grid>
-        </Grid>
+            
+            <Alert severity="info" sx={{ mt: 1 }}>
+              <Typography variant="body2">
+                <strong>Note:</strong> The system will automatically fetch your current rank and decay status from Riot Games API.
+              </Typography>
+            </Alert>
+          </Box>
       </DialogContent>
       
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
+        <DialogActions sx={{ p: 3, pt: 1 }}>
+          <Button 
+            onClick={handleClose} 
+            disabled={isSubmitting}
+            variant="outlined"
+          >
+            Cancel
+          </Button>
         <Button 
-          onClick={handleSubmit} 
+            type="submit" 
           variant="contained" 
-          color="primary"
+            disabled={isSubmitting || isLoading}
+            startIcon={isSubmitting ? <CircularProgress size={16} /> : null}
         >
-          Add Account
+            {isSubmitting ? 'Adding Account...' : 'Add Account'}
         </Button>
       </DialogActions>
+      </form>
     </Dialog>
   );
 };

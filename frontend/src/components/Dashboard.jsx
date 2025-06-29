@@ -8,12 +8,16 @@ import {
   AppBar,
   Toolbar,
   IconButton,
-  CircularProgress
+  CircularProgress,
+  Alert,
+  Snackbar
 } from '@mui/material';
 import LogoutIcon from '@mui/icons-material/Logout';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import { styled } from '@mui/material/styles';
+import { useAuth0 } from '@auth0/auth0-react';
+import { userAPI, accountsAPI, handleAPIError, clearAuthToken } from '../services/api.js';
 
 // Import custom components
 import AccountList from './AccountList';
@@ -35,88 +39,173 @@ const WelcomeCard = styled(Paper)(({ theme }) => ({
 const Dashboard = () => {
   const [accounts, setAccounts] = useState([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const { user, logout, getAccessTokenSilently } = useAuth0();
   
-  // Load user data from localStorage
+  // Load user data and accounts from API
   useEffect(() => {
-    const userDataString = localStorage.getItem('user');
-    console.log('User data from localStorage:', userDataString);
-    
-    if (userDataString) {
+    const loadData = async () => {
       try {
-        const userData = JSON.parse(userDataString);
-        setUser(userData);
+        setIsLoading(true);
+        setError(null);
         
-        // Mock data for development - replace with real API calls later
-        if (userData.isAdmin) {
-          setAccounts([
-            {
-              id: 1,
-              riot_id: 'RiotUser1#NA1',
-              game_name: 'RiotUser1',
-              tag_line: 'NA1',
-              region: 'NA',
-              decay_days_remaining: 28,
-              last_updated: new Date().toISOString()
-            },
-            {
-              id: 2,
-              riot_id: 'RiotUser2#EUW',
-              game_name: 'RiotUser2',
-              tag_line: 'EUW',
-              region: 'EUW',
-              decay_days_remaining: 3,
-              last_updated: new Date().toISOString()
-            }
-          ]);
-        }
+        // Ensure we have the latest token
+        const token = await getAccessTokenSilently();
+        localStorage.setItem('auth0_token', token);
+        
+        // Load user's league accounts
+        const accountsResponse = await userAPI.getAccounts();
+        setAccounts(accountsResponse.data || []);
+        
       } catch (error) {
-        console.error('Error parsing user data:', error);
+        console.error('Error loading dashboard data:', error);
+        setError(handleAPIError(error));
+      } finally {
+        setIsLoading(false);
       }
-    }
-  }, []);
-  
-  const handleAddAccount = (newAccount) => {
-    // In a real app, this would make an API call to your backend
-    const accountWithId = {
-      ...newAccount,
-      id: accounts.length + 1, // This would be handled by the DB
-      last_updated: new Date().toISOString()
     };
-    
-    setAccounts([...accounts, accountWithId]);
-    setIsAddDialogOpen(false);
+
+    if (user) {
+      loadData();
+    }
+  }, [user, getAccessTokenSilently]);
+  
+  const handleAddAccount = async (newAccount) => {
+    try {
+      setIsLoading(true);
+      const response = await accountsAPI.add(newAccount);
+      
+      // Add the new account to the list
+      setAccounts(prevAccounts => [...prevAccounts, response.data]);
+      setIsAddDialogOpen(false);
+      
+      setSnackbar({
+        open: true,
+        message: 'League account added successfully!',
+        severity: 'success'
+      });
+      
+    } catch (error) {
+      console.error('Error adding account:', error);
+      setSnackbar({
+        open: true,
+        message: handleAPIError(error),
+        severity: 'error'
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
   
-  const handleDeleteAccount = (accountId) => {
-    // In a real app, make an API call to delete from backend
-    setAccounts(accounts.filter(account => account.id !== accountId));
+  const handleDeleteAccount = async (accountId) => {
+    try {
+      await accountsAPI.delete(accountId);
+      
+      // Remove the account from the list
+      setAccounts(prevAccounts => prevAccounts.filter(account => account._id !== accountId));
+      
+      setSnackbar({
+        open: true,
+        message: 'Account deleted successfully!',
+        severity: 'success'
+      });
+      
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      setSnackbar({
+        open: true,
+        message: handleAPIError(error),
+        severity: 'error'
+      });
+    }
+  };
+
+  const handleRefreshAccount = async (accountId) => {
+    try {
+      const response = await accountsAPI.refresh(accountId);
+      
+      // Update the account in the list
+      setAccounts(prevAccounts => 
+        prevAccounts.map(account => 
+          account._id === accountId ? response.data : account
+        )
+      );
+      
+      setSnackbar({
+        open: true,
+        message: 'Account data refreshed successfully!',
+        severity: 'success'
+      });
+      
+    } catch (error) {
+      console.error('Error refreshing account:', error);
+      setSnackbar({
+        open: true,
+        message: handleAPIError(error),
+        severity: 'error'
+      });
+    }
   };
   
   const handleLogout = () => {
-    localStorage.removeItem('user');
-    window.location.href = '/login';
+    clearAuthToken();
+    logout({ logoutParams: { returnTo: window.location.origin + '/login' } });
   };
   
   // Find account with most urgent decay
   const getMostUrgentAccount = () => {
     if (accounts.length === 0) return null;
     return accounts.reduce((prev, current) => 
-      (prev.decay_days_remaining < current.decay_days_remaining) ? prev : current
+      (prev.remainingDecayDays < current.remainingDecayDays) ? prev : current
     );
   };
   
   const urgentAccount = getMostUrgentAccount();
   
-  // For debugging - remove in production
-  console.log('User state:', user);
-  console.log('Accounts state:', accounts);
-  console.log('Urgent account:', urgentAccount);
+  // Show loading state
+  if (isLoading && accounts.length === 0) {
+    return (
+      <Container sx={{ mt: 10, textAlign: 'center' }}>
+        <CircularProgress color="primary" />
+        <Typography variant="h6" sx={{ mt: 2 }}>
+          Loading your accounts...
+        </Typography>
+      </Container>
+    );
+  }
   
+  // Show error state
+  if (error) {
+    return (
+      <Container sx={{ mt: 10, textAlign: 'center' }}>
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+        <Button 
+          variant="contained" 
+          color="primary" 
+          onClick={() => window.location.reload()}
+          sx={{ mr: 2 }}
+        >
+          Retry
+        </Button>
+        <Button 
+          variant="outlined" 
+          onClick={handleLogout}
+        >
+          Logout
+        </Button>
+      </Container>
+    );
+  }
+  
+  // Show error state if no user
   if (!user) {
     return (
       <Container sx={{ mt: 10, textAlign: 'center' }}>
-        <Typography variant="h5">Loading user data...</Typography>
+        <Typography variant="h5">No user data available</Typography>
         <Button 
           variant="contained" 
           color="primary" 
@@ -140,7 +229,7 @@ const Dashboard = () => {
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <AccountCircleIcon sx={{ mr: 1 }} />
             <Typography variant="body1" sx={{ mr: 2 }}>
-              {user?.username || 'Summoner'}
+              {user?.name || user?.email || 'Summoner'}
             </Typography>
             <IconButton color="inherit" onClick={handleLogout}>
               <LogoutIcon />
@@ -152,14 +241,14 @@ const Dashboard = () => {
       <DashboardContainer>
         {urgentAccount && (
           <GlobalDecayCountdown 
-            daysRemaining={urgentAccount.decay_days_remaining} 
-            accountName={urgentAccount.game_name}
+            daysRemaining={urgentAccount.remainingDecayDays} 
+            accountName={urgentAccount.gameName}
           />
         )}
         
         <WelcomeCard elevation={3}>
           <Typography variant="h5" gutterBottom>
-            Welcome back, {user?.username || 'Summoner'}!
+            Welcome back, {user?.name || user?.email || 'Summoner'}!
           </Typography>
           <Typography variant="body1">
             Track your League of Legends ranked decay across multiple accounts.
@@ -167,27 +256,65 @@ const Dashboard = () => {
         </WelcomeCard>
         
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-          <Typography variant="h5">Your Accounts</Typography>
+          <Typography variant="h5">Your Accounts ({accounts.length})</Typography>
           <Button 
             variant="contained" 
             color="primary" 
             startIcon={<AddCircleIcon />}
             onClick={() => setIsAddDialogOpen(true)}
+            disabled={isLoading}
           >
             Add Account
           </Button>
         </Box>
         
-        <AccountList 
-          accounts={accounts} 
-          onDelete={handleDeleteAccount} 
-        />
+        {accounts.length === 0 ? (
+          <Paper sx={{ p: 4, textAlign: 'center' }}>
+            <Typography variant="h6" gutterBottom>
+              No League accounts yet
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              Add your first League of Legends account to start tracking decay
+            </Typography>
+            <Button 
+              variant="contained" 
+              color="primary" 
+              startIcon={<AddCircleIcon />}
+              onClick={() => setIsAddDialogOpen(true)}
+            >
+              Add Your First Account
+            </Button>
+          </Paper>
+        ) : (
+          <AccountList 
+            accounts={accounts} 
+            onDelete={handleDeleteAccount}
+            onRefresh={handleRefreshAccount}
+            isLoading={isLoading}
+          />
+        )}
         
         <AddAccountDialog 
           open={isAddDialogOpen} 
           onClose={() => setIsAddDialogOpen(false)}
           onAdd={handleAddAccount}
+          isLoading={isLoading}
         />
+
+        {/* Snackbar for notifications */}
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={6000}
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+        >
+          <Alert 
+            onClose={() => setSnackbar({ ...snackbar, open: false })} 
+            severity={snackbar.severity}
+            sx={{ width: '100%' }}
+          >
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
       </DashboardContainer>
     </>
   );
