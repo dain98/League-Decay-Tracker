@@ -1,9 +1,9 @@
 import axios from 'axios';
 
-// API base URL - update this to match your backend
-// For local development: 'http://localhost:5000/api'
+// API base URL - loaded from environment variables
+// For local development: 'http://localhost:3001/api'
 // For production: 'https://ldbackend.dain.cafe/api'
-const API_BASE_URL = 'https://ldbackend.dain.cafe/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 // Create axios instance with default config
 const apiClient = axios.create({
@@ -159,4 +159,4 @@ export const handleAPIError = (error) => {
   }
 };
 
-export default apiClient; 
+export default apiClient;
