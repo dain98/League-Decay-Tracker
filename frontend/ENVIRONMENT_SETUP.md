@@ -27,6 +27,10 @@ This document explains how to set up environment variables for the League Decay 
 
 - `VITE_API_BASE_URL`: Your backend API URL (e.g., `http://localhost:3001/api` for local development)
 
+### Development Server
+
+- `VITE_ALLOWED_HOSTS`: Comma-separated list of allowed hosts for Vite dev server (e.g., `your-ngrok-url.ngrok-free.app`)
+
 ## Example .env File
 
 ```env
@@ -38,6 +42,17 @@ VITE_AUTH0_AUDIENCE=https://dev-ba1g8igbj36ihsp7.us.auth0.com/api/v2/
 
 # Backend API URL
 VITE_API_BASE_URL=http://localhost:3001/api
+
+# Development Server
+VITE_ALLOWED_HOSTS=f169-108-53-147-205.ngrok-free.app
+```
+
+## Multiple Allowed Hosts
+
+You can specify multiple hosts by separating them with commas:
+
+```env
+VITE_ALLOWED_HOSTS=host1.example.com,host2.example.com,localhost
 ```
 
 ## Security Notes
@@ -58,4 +73,4 @@ VITE_API_BASE_URL=http://localhost:3001/api
 
 - For local development, use `http://localhost:3001/api` as your API base URL
 - For production, use your actual backend URL
-- Update the redirect URI when your ngrok URL changes 
+- Update the redirect URI and allowed hosts when your ngrok URL changes
