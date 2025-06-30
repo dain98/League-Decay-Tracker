@@ -1,5 +1,4 @@
 # Ranked Decay Tracker
-
 A web application to track League of Legends ranked decay status across multiple accounts.
 
 ## Features
@@ -15,6 +14,17 @@ A web application to track League of Legends ranked decay status across multiple
 - **Backend**: Fastify
 - **Database**: MariaDB
 - **Authentication**: Riot Games OAuth
+
+## Screenshots
+
+<details>
+  <summary>📸 Click to show screenshots</summary>
+
+  ![Screenshot 1](http://cdn.petrichor.one/u/lu1UEW.png)
+  ![Screenshot 2](http://cdn.petrichor.one/u/yWaNok.png)
+  ![Screenshot 3](http://cdn.petrichor.one/u/nNl10B.png)
+
+</details>
 
 ## Getting Started
 
