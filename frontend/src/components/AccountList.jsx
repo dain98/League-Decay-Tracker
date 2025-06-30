@@ -12,7 +12,13 @@ import {
   Box,
   Typography,
   Tooltip,
-  CircularProgress
+  CircularProgress,
+  Avatar,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -37,6 +43,27 @@ const DecayChip = styled(Chip)(({ theme, severity }) => ({
 }));
 
 const AccountList = ({ accounts, onDelete, onRefresh, isLoading }) => {
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [accountToDelete, setAccountToDelete] = React.useState(null);
+
+  const handleDeleteClick = (accountId) => {
+    setAccountToDelete(accountId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (accountToDelete) {
+      onDelete(accountToDelete);
+    }
+    setDeleteDialogOpen(false);
+    setAccountToDelete(null);
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialogOpen(false);
+    setAccountToDelete(null);
+  };
+
   const getDecaySeverity = (daysRemaining) => {
     if (daysRemaining <= 3) return 'critical';
     if (daysRemaining <= 7) return 'warning';
@@ -88,17 +115,26 @@ const AccountList = ({ accounts, onDelete, onRefresh, isLoading }) => {
           {accounts.map((account) => {
             const severity = getDecaySeverity(account.remainingDecayDays);
             const decayLabel = getDecayLabel(account.remainingDecayDays);
+            const iconUrl = `https://ddragon.leagueoflegends.com/cdn/latest/img/profileicon/${account.summonerIcon}.png`;
+            console.log('SummonerIcon:', account.summonerIcon, 'IconURL:', iconUrl);
             
             return (
               <StyledTableRow key={account._id}>
                 <TableCell>
-                  <Box>
-                    <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                      {account.gameName}#{account.tagLine}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {account.riotId}
-                    </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Avatar
+                      src={iconUrl}
+                      alt="Summoner Icon"
+                      sx={{ width: 32, height: 32, mr: 1 }}
+                    />
+                    <Box>
+                      <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                        {account.gameName}#{account.tagLine}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {account.riotId}
+                      </Typography>
+                    </Box>
                   </Box>
                 </TableCell>
                 
@@ -148,11 +184,11 @@ const AccountList = ({ accounts, onDelete, onRefresh, isLoading }) => {
                       <IconButton 
                         size="small" 
                         color="error"
-                        onClick={() => onDelete(account._id)}
+                        onClick={() => handleDeleteClick(account._id)}
                         disabled={isLoading}
                       >
-                  <DeleteIcon />
-                </IconButton>
+                        <DeleteIcon />
+                      </IconButton>
                     </Tooltip>
                   </Box>
                 </TableCell>
@@ -161,6 +197,21 @@ const AccountList = ({ accounts, onDelete, onRefresh, isLoading }) => {
           })}
         </TableBody>
       </Table>
+      {/* Delete confirmation dialog */}
+      <Dialog open={deleteDialogOpen} onClose={handleDeleteCancel}>
+        <DialogTitle>Delete Account</DialogTitle>
+        <DialogContent>
+          Are you sure you want to delete this account? This action cannot be undone.
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDeleteCancel} color="primary">
+            Cancel
+          </Button>
+          <Button onClick={handleDeleteConfirm} color="error" variant="contained">
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </TableContainer>
   );
 };

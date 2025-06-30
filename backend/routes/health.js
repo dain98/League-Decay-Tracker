@@ -3,7 +3,6 @@ import { testConnection } from '../database/index.js';
 
 const router = express.Router();
 
-// Health check endpoint
 router.get('/', async (req, res) => {
   try {
     const dbStatus = await testConnection();
@@ -32,7 +31,6 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Detailed health check
 router.get('/detailed', async (req, res) => {
   try {
     const dbStatus = await testConnection();

@@ -10,14 +10,19 @@ import {
   IconButton,
   CircularProgress,
   Alert,
-  Snackbar
+  Snackbar,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField
 } from '@mui/material';
 import LogoutIcon from '@mui/icons-material/Logout';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import { styled } from '@mui/material/styles';
 import { useAuth0 } from '@auth0/auth0-react';
-import { userAPI, accountsAPI, handleAPIError, clearAuthToken } from '../services/api.js';
+import apiClient, { userAPI, accountsAPI, handleAPIError, clearAuthToken } from '../services/api.js';
 
 // Import custom components
 import AccountList from './AccountList';
@@ -43,33 +48,45 @@ const Dashboard = () => {
   const [error, setError] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const { user, logout, getAccessTokenSilently } = useAuth0();
+  const [missingNameDialogOpen, setMissingNameDialogOpen] = useState(false);
+  const [fallbackName, setFallbackName] = useState('');
+  const [pendingLoad, setPendingLoad] = useState(false);
   
-  // Load user data and accounts from API
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        
-        // Ensure we have the latest token
-        const token = await getAccessTokenSilently();
-        localStorage.setItem('auth0_token', token);
-        
-        // Load user's league accounts
-        const accountsResponse = await userAPI.getAccounts();
-        setAccounts(accountsResponse.data || []);
-        
-      } catch (error) {
-        console.error('Error loading dashboard data:', error);
-        setError(handleAPIError(error));
-      } finally {
-        setIsLoading(false);
+  const loadData = async (fallbackNameParam) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      // Ensure we have the latest token
+      const token = await getAccessTokenSilently();
+      localStorage.setItem('auth0_token', token);
+      // Load user's league accounts
+      let url = '/users/me/accounts';
+      if (fallbackNameParam) {
+        url += `?fallbackName=${encodeURIComponent(fallbackNameParam)}`;
       }
-    };
+      const response = await apiClient.get(url);
+      setAccounts(response.data.data || []);
+    } catch (error) {
+      if (error.response && error.response.data && error.response.data.error === 'MISSING_NAME') {
+        setMissingNameDialogOpen(true);
+        setPendingLoad(true);
+        return;
+      }
+      if (error.response && error.response.data && error.response.data.error === 'DUPLICATE_EMAIL') {
+        setError('An account with this email already exists. Please log in using your original provider.');
+        return;
+      }
+      setError(handleAPIError(error));
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    if (user) {
+  useEffect(() => {
+    if (user && !missingNameDialogOpen && !pendingLoad) {
       loadData();
     }
+    // eslint-disable-next-line
   }, [user, getAccessTokenSilently]);
   
   const handleAddAccount = async (newAccount) => {
@@ -163,6 +180,21 @@ const Dashboard = () => {
   };
   
   const urgentAccount = getMostUrgentAccount();
+  
+  // Handler for submitting fallback name
+  const handleFallbackNameSubmit = async () => {
+    setMissingNameDialogOpen(false);
+    setPendingLoad(false);
+    setIsLoading(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 100)); // Small delay for dialog close
+      await loadData(fallbackName);
+    } catch (error) {
+      setError(handleAPIError(error));
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
   // Show loading state
   if (isLoading && accounts.length === 0) {
@@ -315,6 +347,31 @@ const Dashboard = () => {
             {snackbar.message}
           </Alert>
         </Snackbar>
+
+        <Dialog open={missingNameDialogOpen} disableEscapeKeyDown>
+          <DialogTitle>Please enter your name</DialogTitle>
+          <DialogContent>
+            <TextField
+              autoFocus
+              margin="dense"
+              label="Name"
+              type="text"
+              fullWidth
+              value={fallbackName}
+              onChange={e => setFallbackName(e.target.value)}
+              required
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={handleFallbackNameSubmit}
+              variant="contained"
+              disabled={!fallbackName.trim()}
+            >
+              Continue
+            </Button>
+          </DialogActions>
+        </Dialog>
       </DashboardContainer>
     </>
   );

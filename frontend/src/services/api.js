@@ -2,8 +2,8 @@ import axios from 'axios';
 
 // API base URL - update this to match your backend
 // For local development: 'http://localhost:5000/api'
-// For ngrok: 'https://YOUR_NGROK_BACKEND_URL/api'
-const API_BASE_URL = 'https://YOUR_NGROK_BACKEND_URL/api';
+// For production: 'https://ldbackend.dain.cafe/api'
+const API_BASE_URL = 'https://ldbackend.dain.cafe/api';
 
 // Create axios instance with default config
 const apiClient = axios.create({

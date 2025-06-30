@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import jwksClient from 'jwks-rsa';
 import dotenv from 'dotenv';
+import getUserProfileFromAuth0 from '../services/auth0.js';
 
 dotenv.config();
 
@@ -81,16 +82,12 @@ export const authenticateToken = async (req, res, next) => {
     
     // Verify the token
     const decoded = await verifyToken(token);
-    
+
+    // Fetch the full user profile from Auth0
+    const userProfile = await getUserProfileFromAuth0(token);
+
     // Add user info to request
-    req.user = {
-      sub: decoded.sub,
-      email: decoded.email,
-      name: decoded.name,
-      picture: decoded.picture,
-      email_verified: decoded.email_verified,
-      nickname: decoded.nickname
-    };
+    req.user = userProfile;
     
     next();
   } catch (error) {

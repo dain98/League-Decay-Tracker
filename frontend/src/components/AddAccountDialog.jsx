@@ -39,7 +39,8 @@ const AddAccountDialog = ({ open, onClose, onAdd, isLoading }) => {
   const [formData, setFormData] = useState({
     gameName: '',
     tagLine: '',
-    region: 'NA1'
+    region: 'NA1',
+    remainingDecayDays: ''
   });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -69,6 +70,12 @@ const AddAccountDialog = ({ open, onClose, onAdd, isLoading }) => {
       newErrors.tagLine = 'Tag line can only contain letters and numbers';
     }
     
+    // Remaining Decay Days validation
+    const decay = Number(formData.remainingDecayDays);
+    if (isNaN(decay) || decay < 0 || decay > 28) {
+      newErrors.remainingDecayDays = 'Enter a number between 0 and 28';
+    }
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -88,7 +95,8 @@ const AddAccountDialog = ({ open, onClose, onAdd, isLoading }) => {
         gameName: formData.gameName.trim(),
         tagLine: formData.tagLine.trim(),
         region: formData.region,
-        riotId: `${formData.gameName.trim()}#${formData.tagLine.trim()}`
+        riotId: `${formData.gameName.trim()}#${formData.tagLine.trim()}`,
+        remainingDecayDays: Number(formData.remainingDecayDays)
       };
 
       await onAdd(accountData);
@@ -97,7 +105,8 @@ const AddAccountDialog = ({ open, onClose, onAdd, isLoading }) => {
       setFormData({
         gameName: '',
         tagLine: '',
-        region: 'NA1'
+        region: 'NA1',
+        remainingDecayDays: ''
       });
       setErrors({});
       
@@ -114,7 +123,8 @@ const AddAccountDialog = ({ open, onClose, onAdd, isLoading }) => {
       setFormData({
         gameName: '',
         tagLine: '',
-        region: 'NA1'
+        region: 'NA1',
+        remainingDecayDays: ''
       });
       setErrors({});
       onClose();
@@ -193,6 +203,19 @@ const AddAccountDialog = ({ open, onClose, onAdd, isLoading }) => {
                 ))}
               </Select>
             </FormControl>
+            
+            <TextField
+              label="Remaining Decay Days"
+              type="number"
+              value={formData.remainingDecayDays}
+              onChange={handleInputChange('remainingDecayDays')}
+              error={!!errors.remainingDecayDays}
+              helperText={errors.remainingDecayDays || 'Enter a number between 0 and 28'}
+              disabled={isSubmitting}
+              fullWidth
+              required
+              inputProps={{ min: 0, max: 28 }}
+            />
             
             <Alert severity="info" sx={{ mt: 1 }}>
               <Typography variant="body2">

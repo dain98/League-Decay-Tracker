@@ -9,7 +9,7 @@ const router = express.Router();
 router.get('/me', authenticateToken, async (req, res) => {
   try {
     // Find or create user from Auth0 data
-    const user = await User.findOrCreateFromAuth0(req.user);
+    const user = await User.findOrCreateFromAuth0(req.user, req.query.fallbackName);
     
     res.json({
       success: true,
@@ -26,6 +26,20 @@ router.get('/me', authenticateToken, async (req, res) => {
       }
     });
   } catch (error) {
+    if (error.message === 'MISSING_NAME') {
+      return res.status(400).json({
+        success: false,
+        error: 'MISSING_NAME',
+        message: 'No name, nickname, or email available. Please provide a name.'
+      });
+    }
+    if (error.message === 'DUPLICATE_EMAIL') {
+      return res.status(400).json({
+        success: false,
+        error: 'DUPLICATE_EMAIL',
+        message: 'An account with this email already exists. Please log in using your original provider.'
+      });
+    }
     console.error('Error getting user profile:', error);
     res.status(500).json({
       success: false,
@@ -97,22 +111,29 @@ router.put('/me', [
 // Get user's league accounts
 router.get('/me/accounts', authenticateToken, async (req, res) => {
   try {
-    const user = await User.findOne({ auth0Id: req.user.sub });
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: 'User not found'
-      });
-    }
-
+    console.log('Fallback name param:', req.query.fallbackName);
+    const user = await User.findOrCreateFromAuth0(req.user, req.query.fallbackName);
     // Get user's league accounts with population
     const accounts = await user.populate('leagueAccounts');
-
     res.json({
       success: true,
       data: accounts.leagueAccounts || []
     });
   } catch (error) {
+    if (error.message === 'MISSING_NAME') {
+      return res.status(400).json({
+        success: false,
+        error: 'MISSING_NAME',
+        message: 'No name, nickname, or email available. Please provide a name.'
+      });
+    }
+    if (error.message === 'DUPLICATE_EMAIL') {
+      return res.status(400).json({
+        success: false,
+        error: 'DUPLICATE_EMAIL',
+        message: 'An account with this email already exists. Please log in using your original provider.'
+      });
+    }
     console.error('Error getting user accounts:', error);
     res.status(500).json({
       success: false,
