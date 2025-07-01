@@ -75,6 +75,7 @@ const Profile = ({ onClose }) => {
   const [editingField, setEditingField] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [localUser, setLocalUser] = useState(user);
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
@@ -96,11 +97,9 @@ const Profile = ({ onClose }) => {
       const response = await userAPI.updateProfile(updateData);
       console.log('Profile update response:', response);
       
-      // Update the local Auth0 user data to reflect changes immediately
       if (response.success && response.data) {
-        // Note: Auth0 user object is read-only, so we can't directly update it
-        // The changes will be reflected on next login or page refresh
-        // For now, we'll show a success message
+        // Update local user state
+        setLocalUser(prev => ({ ...prev, ...response.data }));
       }
       
       setSnackbar({
@@ -109,12 +108,6 @@ const Profile = ({ onClose }) => {
         severity: 'success'
       });
       setEditDialogOpen(false);
-      
-      // Force a page refresh to get updated Auth0 data
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
-      
     } catch (error) {
       console.error('Profile update error:', error);
       setSnackbar({
@@ -237,8 +230,8 @@ const Profile = ({ onClose }) => {
             <InfoSection>
               <InfoContent>
                 <Avatar
-                  src={user?.picture || editValue}
-                  alt={user?.name || 'User'}
+                  src={localUser?.picture || editValue}
+                  alt={localUser?.name || 'User'}
                   sx={{ width: 64, height: 64 }}
                 />
                 <Box>
@@ -246,12 +239,12 @@ const Profile = ({ onClose }) => {
                     Profile Picture
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    {user?.picture ? 'Custom profile picture' : 'No profile picture set'}
+                    {localUser?.picture ? 'Custom profile picture' : 'No profile picture set'}
                   </Typography>
                 </Box>
               </InfoContent>
               <IconButton 
-                onClick={() => handleEditClick('picture', user?.picture)}
+                onClick={() => handleEditClick('picture', localUser?.picture)}
                 color="primary"
               >
                 <EditIcon />
@@ -266,12 +259,12 @@ const Profile = ({ onClose }) => {
                     Name
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    {user?.name || 'No name set'}
+                    {localUser?.name || 'No name set'}
                   </Typography>
                 </Box>
               </InfoContent>
               <IconButton 
-                onClick={() => handleEditClick('name', user?.name)}
+                onClick={() => handleEditClick('name', localUser?.name)}
                 color="primary"
               >
                 <EditIcon />
@@ -286,12 +279,12 @@ const Profile = ({ onClose }) => {
                     Email Address
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    {user?.email || 'No email set'}
+                    {localUser?.email || 'No email set'}
                   </Typography>
                 </Box>
               </InfoContent>
               <IconButton 
-                onClick={() => handleEditClick('email', user?.email)}
+                onClick={() => handleEditClick('email', localUser?.email)}
                 color="primary"
               >
                 <EditIcon />
