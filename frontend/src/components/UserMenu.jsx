@@ -16,7 +16,6 @@ import Brightness7Icon from '@mui/icons-material/Brightness7';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { styled } from '@mui/material/styles';
-import { useThemeMode } from '../context/ThemeContext.jsx';
 
 const UserMenuButton = styled(Box)(({ theme }) => ({
   display: 'flex',
