@@ -22,7 +22,7 @@ import {
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import { styled } from '@mui/material/styles';
+import { styled, useTheme } from '@mui/material/styles';
 import { getSummonerIconUrlSync } from '../services/ddragon.js';
 
 // Styled components
@@ -60,6 +60,7 @@ const AccountList = ({ accounts, onDelete, onRefresh, isLoading }) => {
   const [accountToDelete, setAccountToDelete] = React.useState(null);
   const [refreshCooldowns, setRefreshCooldowns] = React.useState({});
   const [tooltipTime, setTooltipTime] = React.useState({});
+  const theme = useTheme();
 
   // 5 minutes in milliseconds
   const REFRESH_COOLDOWN_MS = 5 * 60 * 1000;
@@ -216,13 +217,13 @@ const AccountList = ({ accounts, onDelete, onRefresh, isLoading }) => {
     <StyledTableContainer component={Paper} elevation={3}>
       <Table>
         <TableHead>
-          <TableRow sx={{ backgroundColor: 'rgba(10, 50, 60, 0.3)' }}>
-            <TableCell sx={{ fontWeight: 'bold' }}>Account</TableCell>
-            <TableCell sx={{ fontWeight: 'bold' }}>Region</TableCell>
-            <TableCell sx={{ fontWeight: 'bold' }}>Current Rank</TableCell>
-            <TableCell sx={{ fontWeight: 'bold' }}>Decay Status</TableCell>
-            <TableCell sx={{ fontWeight: 'bold' }}>Last Updated</TableCell>
-            <TableCell sx={{ fontWeight: 'bold' }}>Actions</TableCell>
+          <TableRow sx={{ backgroundColor: theme.palette.mode === 'dark' ? 'rgba(10, 50, 60, 0.3)' : theme.palette.grey[200] }}>
+            <TableCell sx={{ fontWeight: 'bold', color: theme.palette.text.primary }}>Account</TableCell>
+            <TableCell sx={{ fontWeight: 'bold', color: theme.palette.text.primary }}>Region</TableCell>
+            <TableCell sx={{ fontWeight: 'bold', color: theme.palette.text.primary }}>Current Rank</TableCell>
+            <TableCell sx={{ fontWeight: 'bold', color: theme.palette.text.primary }}>Decay Status</TableCell>
+            <TableCell sx={{ fontWeight: 'bold', color: theme.palette.text.primary }}>Last Updated</TableCell>
+            <TableCell sx={{ fontWeight: 'bold', color: theme.palette.text.primary }}>Actions</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -233,7 +234,7 @@ const AccountList = ({ accounts, onDelete, onRefresh, isLoading }) => {
             
             return (
               <StyledTableRow key={account._id}>
-                <TableCell>
+                <TableCell sx={{ color: theme.palette.text.primary }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Avatar
                       src={iconUrl}
@@ -241,17 +242,16 @@ const AccountList = ({ accounts, onDelete, onRefresh, isLoading }) => {
                       sx={{ width: 32, height: 32, mr: 1 }}
                     />
                     <Box>
-                      <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                      <Typography variant="body1" sx={{ fontWeight: 'bold', color: theme.palette.text.primary }}>
                         {account.gameName}#{account.tagLine}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
                         {account.riotId}
                       </Typography>
                     </Box>
                   </Box>
                 </TableCell>
-                
-                <TableCell>
+                <TableCell sx={{ color: theme.palette.text.primary }}>
                   <Chip 
                     label={account.region} 
                     size="small" 
@@ -259,55 +259,35 @@ const AccountList = ({ accounts, onDelete, onRefresh, isLoading }) => {
                     sx={{ fontWeight: 'bold' }}
                   />
                 </TableCell>
-                
-                <TableCell>
-                  <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
-                    {formatRank(account)}
-                  </Typography>
+                <TableCell sx={{ color: theme.palette.text.primary }}>
+                  {formatRank(account)}
                 </TableCell>
-                
-                <TableCell>
-                  <DecayChip 
-                    label={decayLabel}
-                    severity={severity}
-                        size="small" 
-                  />
+                <TableCell sx={{ color: theme.palette.text.primary }}>
+                  <DecayChip label={decayLabel} severity={severity} size="small" />
                 </TableCell>
-                
-                <TableCell>
-                  <Typography variant="body2" color="text.secondary">
-                    {formatDate(account.lastUpdated)}
-                  </Typography>
+                <TableCell sx={{ color: theme.palette.text.primary }}>
+                  {formatDate(account.lastUpdated)}
                 </TableCell>
-                
-                <TableCell>
-                  <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Tooltip title={getRefreshTooltip(account._id)}>
-                      <IconButton 
-                        size="small" 
-                        color={isRefreshDisabled(account._id) ? "disabled" : "primary"}
+                <TableCell sx={{ color: theme.palette.text.primary }}>
+                  <Tooltip title={getRefreshTooltip(account._id)}>
+                    <span>
+                      <IconButton
                         onClick={() => handleRefreshClick(account._id)}
-                        disabled={isRefreshDisabled(account._id) || isLoading}
-                        sx={{
-                          opacity: isRefreshDisabled(account._id) ? 0.5 : 1,
-                          transition: 'opacity 0.2s ease-in-out'
-                        }}
+                        disabled={isLoading || isRefreshDisabled(account._id)}
+                        size="small"
+                        color="primary"
                       >
                         <RefreshIcon />
                       </IconButton>
-                    </Tooltip>
-                    
-                    <Tooltip title="Delete account">
-                      <IconButton 
-                        size="small" 
-                        color="error"
-                        onClick={() => handleDeleteClick(account._id)}
-                        disabled={isLoading}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </Tooltip>
-                  </Box>
+                    </span>
+                  </Tooltip>
+                  <IconButton
+                    onClick={() => handleDeleteClick(account._id)}
+                    color="error"
+                    size="small"
+                  >
+                    <DeleteIcon />
+                  </IconButton>
                 </TableCell>
               </StyledTableRow>
             );
