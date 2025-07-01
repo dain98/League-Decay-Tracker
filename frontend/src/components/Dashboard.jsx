@@ -38,6 +38,8 @@ import apiClient, { userAPI, accountsAPI, handleAPIError, clearAuthToken } from 
 import AccountList from './AccountList';
 import AddAccountDialog from './AddAccountDialog';
 import GlobalDecayCountdown from './GlobalDecayCountdown';
+import UserMenu from './UserMenu';
+import { LoadingState, ErrorState, NoUserState, EmptyAccountsState } from './DashboardStates';
 
 // Styled components
 const DashboardContainer = styled(Container)(({ theme }) => ({
@@ -251,56 +253,17 @@ const Dashboard = () => {
   
   // Show loading state
   if (isLoading && accounts.length === 0) {
-    return (
-      <Container sx={{ mt: 10, textAlign: 'center' }}>
-        <CircularProgress color="primary" />
-        <Typography variant="h6" sx={{ mt: 2 }}>
-          Loading your accounts...
-        </Typography>
-      </Container>
-    );
+    return <LoadingState />;
   }
   
   // Show error state
   if (error) {
-    return (
-      <Container sx={{ mt: 10, textAlign: 'center' }}>
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-        <Button 
-          variant="contained" 
-          color="primary" 
-          onClick={() => window.location.reload()}
-          sx={{ mr: 2 }}
-        >
-          Retry
-        </Button>
-        <Button 
-          variant="outlined" 
-          onClick={handleLogout}
-        >
-          Logout
-        </Button>
-      </Container>
-    );
+    return <ErrorState error={error} onRetry={() => window.location.reload()} onLogout={handleLogout} />;
   }
   
   // Show error state if no user
   if (!user) {
-    return (
-      <Container sx={{ mt: 10, textAlign: 'center' }}>
-        <Typography variant="h5">No user data available</Typography>
-        <Button 
-          variant="contained" 
-          color="primary" 
-          onClick={handleLogout}
-          sx={{ mt: 2 }}
-        >
-          Return to Login
-        </Button>
-      </Container>
-    );
+    return <NoUserState onLogout={handleLogout} />;
   }
   
   return (
@@ -311,66 +274,13 @@ const Dashboard = () => {
             Ranked Decay Tracker
           </Typography>
           
-          <UserMenuButton onClick={handleUserMenuClick}>
-            {user?.picture ? (
-              <Avatar 
-                src={user.picture} 
-                alt={user?.name || user?.email || 'User'}
-                sx={{ mr: 1, width: 32, height: 32 }}
-              />
-            ) : (
-              <AccountCircleIcon sx={{ mr: 1 }} />
-            )}
-            <Typography variant="body1" sx={{ mr: 1 }}>
-              {user?.name || user?.email || 'Summoner'}
-            </Typography>
-            <KeyboardArrowDownIcon />
-          </UserMenuButton>
-
-          <Menu
-            anchorEl={userMenuAnchor}
-            open={Boolean(userMenuAnchor)}
-            onClose={handleUserMenuClose}
-            anchorOrigin={{
-              vertical: 'bottom',
-              horizontal: 'right',
-            }}
-            transformOrigin={{
-              vertical: 'top',
-              horizontal: 'right',
-            }}
-            PaperProps={{
-              sx: {
-                mt: 1,
-                minWidth: 200,
-                backgroundColor: 'rgba(10, 50, 60, 0.95)',
-                backdropFilter: 'blur(10px)',
-              }
-            }}
-          >
-            <MenuItem onClick={handleProfileClick}>
-              <ListItemIcon>
-                <PersonIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText>Profile</ListItemText>
-            </MenuItem>
-            
-            <MenuItem onClick={handleThemeToggle}>
-              <ListItemIcon>
-                {isDarkTheme ? <Brightness7Icon fontSize="small" /> : <Brightness4Icon fontSize="small" />}
-              </ListItemIcon>
-              <ListItemText>{isDarkTheme ? 'Light Theme' : 'Dark Theme'}</ListItemText>
-            </MenuItem>
-            
-            <Divider sx={{ my: 1 }} />
-            
-            <MenuItem onClick={handleLogout}>
-              <ListItemIcon>
-                <LogoutIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText>Logout</ListItemText>
-            </MenuItem>
-          </Menu>
+          <UserMenu 
+            user={user}
+            onLogout={handleLogout}
+            onProfileClick={handleProfileClick}
+            onThemeToggle={handleThemeToggle}
+            isDarkTheme={isDarkTheme}
+          />
         </Toolbar>
       </AppBar>
       
@@ -405,22 +315,7 @@ const Dashboard = () => {
         </Box>
         
         {accounts.length === 0 ? (
-          <Paper sx={{ p: 4, textAlign: 'center' }}>
-            <Typography variant="h6" gutterBottom>
-              No League accounts yet
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Add your first League of Legends account to start tracking decay
-            </Typography>
-            <Button 
-              variant="contained" 
-              color="primary" 
-              startIcon={<AddCircleIcon />}
-              onClick={() => setIsAddDialogOpen(true)}
-            >
-              Add Your First Account
-            </Button>
-          </Paper>
+          <EmptyAccountsState onAddAccount={() => setIsAddDialogOpen(true)} />
         ) : (
           <AccountList 
             accounts={accounts} 
