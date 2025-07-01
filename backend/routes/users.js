@@ -54,7 +54,8 @@ router.put('/me', [
   authenticateToken,
   body('name').optional().isString().trim().isLength({ min: 1, max: 100 }),
   body('nickname').optional().isString().trim().isLength({ min: 1, max: 50 }),
-  body('picture').optional().isURL()
+  body('picture').optional().isURL(),
+  body('email').optional().isEmail().normalizeEmail()
 ], async (req, res) => {
   try {
     // Check for validation errors
@@ -77,10 +78,22 @@ router.put('/me', [
     }
 
     // Update allowed fields
-    const { name, nickname, picture } = req.body;
+    const { name, nickname, picture, email } = req.body;
     if (name) user.name = name;
     if (nickname) user.nickname = nickname;
     if (picture) user.picture = picture;
+    if (email) {
+      // Check if email is already taken by another user
+      const existingUser = await User.findOne({ email, _id: { $ne: user._id } });
+      if (existingUser) {
+        return res.status(409).json({
+          success: false,
+          error: 'Email already in use',
+          message: 'This email address is already associated with another account.'
+        });
+      }
+      user.email = email;
+    }
 
     await user.save();
 

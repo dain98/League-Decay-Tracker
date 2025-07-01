@@ -26,6 +26,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { styled } from '@mui/material/styles';
 import { useAuth0 } from '@auth0/auth0-react';
+import { userAPI, handleAPIError } from '../services/api.js';
 
 // Styled components
 const ProfileContainer = styled(Container)(({ theme }) => ({
@@ -87,18 +88,38 @@ const Profile = ({ onClose }) => {
 
   const handleEditSave = async () => {
     try {
-      // TODO: Implement actual profile update logic
-      // For now, just show a success message
+      // Prepare update data based on the field being edited
+      const updateData = {};
+      updateData[editingField] = editValue;
+      
+      // Call the API to update the profile
+      const response = await userAPI.updateProfile(updateData);
+      
+      // Update the local Auth0 user data to reflect changes immediately
+      if (response.success && response.data) {
+        // Note: Auth0 user object is read-only, so we can't directly update it
+        // The changes will be reflected on next login or page refresh
+        // For now, we'll show a success message
+      }
+      
       setSnackbar({
         open: true,
-        message: `${editingField} updated successfully!`,
+        message: `${getFieldLabel(editingField)} updated successfully!`,
         severity: 'success'
       });
       setEditDialogOpen(false);
+      
+      // Force a page refresh to get updated Auth0 data
+      // This is a simple solution - in a more sophisticated app, you might
+      // want to implement a more elegant state management solution
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+      
     } catch (error) {
       setSnackbar({
         open: true,
-        message: `Failed to update ${editingField}: ${error.message}`,
+        message: `Failed to update ${getFieldLabel(editingField)}: ${handleAPIError(error)}`,
         severity: 'error'
       });
     }
