@@ -18,6 +18,8 @@ export const ThemeModeProvider = ({ children }) => {
 
   useEffect(() => {
     localStorage.setItem('themeMode', mode);
+    console.log('Theme mode is now:', mode);
+    document.body.style.background = mode === 'dark' ? '#0a1a22' : '#f5f5f5';
   }, [mode]);
 
   const toggleTheme = () => {
