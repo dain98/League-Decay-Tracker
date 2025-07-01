@@ -291,8 +291,6 @@ const Dashboard = () => {
             user={profile}
             onLogout={handleLogout}
             onProfileClick={handleProfileClick}
-            onThemeToggle={handleThemeToggle}
-            isDarkTheme={isDarkTheme}
           />
         </Toolbar>
       </AppBar>
