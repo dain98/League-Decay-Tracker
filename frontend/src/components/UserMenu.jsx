@@ -87,12 +87,6 @@ const UserMenu = ({ user, onLogout, onProfileClick }) => {
           </ListItemIcon>
           Profile
         </MenuItem>
-        <MenuItem onClick={handleThemeToggle}>
-          <ListItemIcon>
-            {mode === 'dark' ? <Brightness7Icon fontSize="small" /> : <Brightness4Icon fontSize="small" />}
-          </ListItemIcon>
-          {mode === 'dark' ? 'Light Mode' : 'Dark Mode'}
-        </MenuItem>
         <Divider />
         <MenuItem onClick={handleLogout}>
           <ListItemIcon>

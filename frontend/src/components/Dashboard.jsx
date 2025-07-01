@@ -79,7 +79,6 @@ const Dashboard = () => {
   const [fallbackName, setFallbackName] = useState('');
   const [pendingLoad, setPendingLoad] = useState(false);
   const [userMenuAnchor, setUserMenuAnchor] = useState(null);
-  const [isDarkTheme, setIsDarkTheme] = useState(true); // Default to dark theme
   const [showProfile, setShowProfile] = useState(false);
 
   const loadData = async (fallbackNameParam) => {
@@ -215,16 +214,6 @@ const Dashboard = () => {
 
   const handleProfileClose = () => {
     setShowProfile(false);
-  };
-
-  const handleThemeToggle = () => {
-    setIsDarkTheme(!isDarkTheme);
-    // TODO: Implement theme switching
-    setSnackbar({
-      open: true,
-      message: `Switched to ${!isDarkTheme ? 'dark' : 'light'} theme!`,
-      severity: 'info'
-    });
   };
 
   const getMostUrgentAccount = () => {
