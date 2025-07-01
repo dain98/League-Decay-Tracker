@@ -29,7 +29,6 @@ import { styled } from '@mui/material/styles';
 import { useAuth0 } from '@auth0/auth0-react';
 import { userAPI, handleAPIError } from '../services/api.js';
 import { useUserProfile } from '../context/UserProfileContext.jsx';
-import { useTheme } from '@mui/material/styles';
 
 // Styled components
 const ProfileContainer = styled(Container)(({ theme }) => ({
@@ -82,7 +81,6 @@ const Profile = ({ onClose }) => {
   const [localProfile, setLocalProfile] = useState(profile);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const theme = useTheme();
 
   useEffect(() => {
     setLocalProfile(profile);
@@ -223,7 +221,7 @@ const Profile = ({ onClose }) => {
           >
             <ArrowBackIcon />
           </IconButton>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             Profile Settings
           </Typography>
         </Toolbar>
@@ -231,7 +229,7 @@ const Profile = ({ onClose }) => {
       
       <ProfileContainer maxWidth="md">
         <ProfileCard elevation={3}>
-          <Typography variant="h4" gutterBottom sx={{ color: theme.palette.text.primary }}>
+          <Typography variant="h4" gutterBottom>
             Profile Settings
           </Typography>
           
@@ -251,7 +249,7 @@ const Profile = ({ onClose }) => {
           </Box>
 
           <TabPanel value={activeTab} index={0}>
-            <Typography variant="h6" gutterBottom sx={{ color: theme.palette.text.primary }}>
+            <Typography variant="h6" gutterBottom>
               Personal Information
             </Typography>
             
@@ -264,10 +262,10 @@ const Profile = ({ onClose }) => {
                   sx={{ width: 64, height: 64 }}
                 />
                 <Box>
-                  <Typography variant="subtitle1" fontWeight="bold" sx={{ color: theme.palette.text.primary }}>
+                  <Typography variant="subtitle1" fontWeight="bold">
                     Profile Picture
                   </Typography>
-                  <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+                  <Typography variant="body2">
                     {localProfile?.picture ? 'Custom profile picture' : 'No profile picture set'}
                   </Typography>
                 </Box>
@@ -284,10 +282,10 @@ const Profile = ({ onClose }) => {
             <InfoSection>
               <InfoContent>
                 <Box>
-                  <Typography variant="subtitle1" fontWeight="bold" sx={{ color: theme.palette.text.primary }}>
+                  <Typography variant="subtitle1" fontWeight="bold">
                     Name
                   </Typography>
-                  <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+                  <Typography variant="body2">
                     {localProfile?.name || 'No name set'}
                   </Typography>
                 </Box>
@@ -304,10 +302,10 @@ const Profile = ({ onClose }) => {
             <InfoSection>
               <InfoContent>
                 <Box>
-                  <Typography variant="subtitle1" fontWeight="bold" sx={{ color: theme.palette.text.primary }}>
+                  <Typography variant="subtitle1" fontWeight="bold">
                     Email Address
                   </Typography>
-                  <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+                  <Typography variant="body2">
                     {localProfile?.email || 'No email set'}
                   </Typography>
                 </Box>
@@ -335,10 +333,10 @@ const Profile = ({ onClose }) => {
           </TabPanel>
 
           <TabPanel value={activeTab} index={1}>
-            <Typography variant="h6" gutterBottom sx={{ color: theme.palette.text.primary }}>
+            <Typography variant="h6" gutterBottom>
               Account Settings
             </Typography>
-            <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+            <Typography variant="body2">
               Settings page coming soon...
             </Typography>
           </TabPanel>

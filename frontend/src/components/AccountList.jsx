@@ -22,7 +22,7 @@ import {
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import { styled, useTheme } from '@mui/material/styles';
+import { styled } from '@mui/material/styles';
 import { getSummonerIconUrlSync } from '../services/ddragon.js';
 
 // Styled components
@@ -60,7 +60,6 @@ const AccountList = ({ accounts, onDelete, onRefresh, isLoading }) => {
   const [accountToDelete, setAccountToDelete] = React.useState(null);
   const [refreshCooldowns, setRefreshCooldowns] = React.useState({});
   const [tooltipTime, setTooltipTime] = React.useState({});
-  const theme = useTheme();
 
   // 5 minutes in milliseconds
   const REFRESH_COOLDOWN_MS = 5 * 60 * 1000;
@@ -234,7 +233,7 @@ const AccountList = ({ accounts, onDelete, onRefresh, isLoading }) => {
             
             return (
               <StyledTableRow key={account._id}>
-                <TableCell sx={{ color: theme.palette.text.primary }}>
+                <TableCell>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Avatar
                       src={iconUrl}
@@ -242,16 +241,16 @@ const AccountList = ({ accounts, onDelete, onRefresh, isLoading }) => {
                       sx={{ width: 32, height: 32, mr: 1 }}
                     />
                     <Box>
-                      <Typography variant="body1" sx={{ fontWeight: 'bold', color: theme.palette.text.primary }}>
+                      <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
                         {account.gameName}#{account.tagLine}
                       </Typography>
-                      <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
+                      <Typography variant="caption">
                         {account.riotId}
                       </Typography>
                     </Box>
                   </Box>
                 </TableCell>
-                <TableCell sx={{ color: theme.palette.text.primary }}>
+                <TableCell>
                   <Chip 
                     label={account.region} 
                     size="small" 
@@ -259,16 +258,16 @@ const AccountList = ({ accounts, onDelete, onRefresh, isLoading }) => {
                     sx={{ fontWeight: 'bold' }}
                   />
                 </TableCell>
-                <TableCell sx={{ color: theme.palette.text.primary }}>
+                <TableCell>
                   {formatRank(account)}
                 </TableCell>
-                <TableCell sx={{ color: theme.palette.text.primary }}>
+                <TableCell>
                   <DecayChip label={decayLabel} severity={severity} size="small" />
                 </TableCell>
-                <TableCell sx={{ color: theme.palette.text.primary }}>
+                <TableCell>
                   {formatDate(account.lastUpdated)}
                 </TableCell>
-                <TableCell sx={{ color: theme.palette.text.primary }}>
+                <TableCell>
                   <Tooltip title={getRefreshTooltip(account._id)}>
                     <span>
                       <IconButton
