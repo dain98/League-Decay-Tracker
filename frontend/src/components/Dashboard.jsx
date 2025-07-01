@@ -52,7 +52,7 @@ const DashboardContainer = styled(Container)(({ theme }) => ({
 const WelcomeCard = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(3),
   marginBottom: theme.spacing(4),
-  backgroundColor: 'rgba(10, 50, 60, 0.8)',
+  backgroundColor: theme.palette.background.paper,
 }));
 
 const UserMenuButton = styled(Box)(({ theme }) => ({
@@ -63,7 +63,7 @@ const UserMenuButton = styled(Box)(({ theme }) => ({
   borderRadius: theme.spacing(1),
   transition: 'background-color 0.2s ease-in-out',
   '&:hover': {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: theme.palette.action.hover,
   },
 }));
 

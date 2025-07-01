@@ -38,7 +38,7 @@ const ProfileContainer = styled(Container)(({ theme }) => ({
 
 const ProfileCard = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(3),
-  backgroundColor: 'rgba(10, 50, 60, 0.8)',
+  backgroundColor: theme.palette.background.paper,
 }));
 
 const InfoSection = styled(Box)(({ theme }) => ({
@@ -47,9 +47,9 @@ const InfoSection = styled(Box)(({ theme }) => ({
   justifyContent: 'space-between',
   padding: theme.spacing(2),
   marginBottom: theme.spacing(2),
-  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  backgroundColor: theme.palette.action.hover,
   borderRadius: theme.spacing(1),
-  border: '1px solid rgba(255, 255, 255, 0.1)',
+  border: `1px solid ${theme.palette.divider}`,
 }));
 
 const InfoContent = styled(Box)({
