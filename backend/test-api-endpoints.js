@@ -41,12 +41,18 @@ const testAPIEndpoints = async () => {
     console.log('3. Testing league account creation...');
     
     // Import the Riot API functions
-    const { getRiotAccountInfo, getRiotRankInfo } = await import('./services/riotApi.js');
+    const { getRiotAccountInfo, getSummonerInfo, getRiotRankInfo } = await import('./services/riotApi.js');
     
     // Get account info from Riot API
     const riotAccountInfo = await getRiotAccountInfo('eden', 'iino', 'NA1');
     console.log('   ✅ Riot account info retrieved');
     console.log(`   PUUID: ${riotAccountInfo.puuid}`);
+    
+    // Get summoner info from Riot API
+    const summonerInfo = await getSummonerInfo(riotAccountInfo.puuid, 'NA1');
+    console.log('   ✅ Summoner info retrieved');
+    console.log(`   Profile Icon ID: ${summonerInfo.profileIconId}`);
+    console.log(`   Summoner Level: ${summonerInfo.summonerLevel}`);
     
     // Get rank info from Riot API
     const rankInfo = await getRiotRankInfo(riotAccountInfo.puuid, 'NA1');
@@ -59,11 +65,11 @@ const testAPIEndpoints = async () => {
     const newAccount = new LeagueAccount({
       userId: user._id,
       puuid: riotAccountInfo.puuid,
-      summonerIcon: 1, // Default icon
+      summonerIcon: summonerInfo.profileIconId || 1, // Use actual profile icon
       gameName: 'eden',
       tagLine: 'iino',
       region: 'NA1',
-      summonerLevel: 150, // Default level
+      summonerLevel: summonerInfo.summonerLevel || 150, // Use actual level
       tier: rankInfo.tier,
       division: rankInfo.division,
       lp: rankInfo.lp,

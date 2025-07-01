@@ -124,17 +124,6 @@ const AccountList = ({ accounts, onDelete, onRefresh, isLoading }) => {
             const decayLabel = getDecayLabel(account.remainingDecayDays);
             const iconUrl = getSummonerIconUrlSync(account.summonerIcon);
             
-            // Debug logging for rank data
-            console.log('Account data:', {
-              id: account._id,
-              gameName: account.gameName,
-              tagLine: account.tagLine,
-              tier: account.tier,
-              division: account.division,
-              lp: account.lp,
-              rankDisplay: account.rankDisplay,
-            });
-            
             return (
               <StyledTableRow key={account._id}>
                 <TableCell>

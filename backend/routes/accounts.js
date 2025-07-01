@@ -2,7 +2,7 @@ import express from 'express';
 import { body, param, validationResult } from 'express-validator';
 import { authenticateToken } from '../middleware/auth.js';
 import { User, LeagueAccount } from '../database/index.js';
-import { getRiotAccountInfo, getRiotRankInfo } from '../services/riotApi.js';
+import { getRiotAccountInfo, getSummonerInfo, getRiotRankInfo } from '../services/riotApi.js';
 
 const router = express.Router();
 
@@ -143,6 +143,9 @@ router.post('/', [
         });
       }
 
+      // Get summoner info to get profile icon and level
+      const summonerInfo = await getSummonerInfo(riotAccountInfo.puuid, region);
+
       // Get rank info from Riot API
       const rankInfo = await getRiotRankInfo(riotAccountInfo.puuid, region);
 
@@ -150,11 +153,11 @@ router.post('/', [
       const newAccount = new LeagueAccount({
         userId: user._id,
         puuid: riotAccountInfo.puuid,
-        summonerIcon: riotAccountInfo.profileIconId || 0,
+        summonerIcon: summonerInfo.profileIconId || 0,
         gameName: gameName,
         tagLine: tagLine,
         region: region,
-        summonerLevel: riotAccountInfo.summonerLevel || 1,
+        summonerLevel: summonerInfo.summonerLevel || 1,
         tier: rankInfo.tier || null,
         division: rankInfo.division || null,
         lp: rankInfo.lp || 0,
@@ -340,11 +343,12 @@ router.post('/:id/refresh', [
     // Refresh data from Riot API
     try {
       const riotAccountInfo = await getRiotAccountInfo(account.gameName, account.tagLine, account.region);
+      const summonerInfo = await getSummonerInfo(account.puuid, account.region);
       const rankInfo = await getRiotRankInfo(account.puuid, account.region);
 
       // Update account with fresh data
-      account.summonerIcon = riotAccountInfo.profileIconId || account.summonerIcon;
-      account.summonerLevel = riotAccountInfo.summonerLevel || account.summonerLevel;
+      account.summonerIcon = summonerInfo.profileIconId || account.summonerIcon;
+      account.summonerLevel = summonerInfo.summonerLevel || account.summonerLevel;
       account.tier = rankInfo.tier || account.tier;
       account.division = rankInfo.division || account.division;
       account.lp = rankInfo.lp || account.lp;
