@@ -16,6 +16,7 @@ import Brightness7Icon from '@mui/icons-material/Brightness7';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { styled } from '@mui/material/styles';
+import { useThemeMode } from '../context/ThemeContext.jsx';
 
 const UserMenuButton = styled(Box)(({ theme }) => ({
   display: 'flex',
@@ -29,29 +30,31 @@ const UserMenuButton = styled(Box)(({ theme }) => ({
   },
 }));
 
-const UserMenu = ({ user, onLogout, onProfileClick, onThemeToggle, isDarkTheme }) => {
-  const [userMenuAnchor, setUserMenuAnchor] = useState(null);
+const UserMenu = ({ user, onLogout, onProfileClick }) => {
+  const [anchorEl, setAnchorEl] = useState(null);
+  const open = Boolean(anchorEl);
+  const { mode, toggleTheme } = useThemeMode();
 
   const handleUserMenuClick = (event) => {
-    setUserMenuAnchor(event.currentTarget);
+    setAnchorEl(event.currentTarget);
   };
 
-  const handleUserMenuClose = () => {
-    setUserMenuAnchor(null);
+  const handleClose = () => {
+    setAnchorEl(null);
   };
 
   const handleProfileClick = () => {
-    handleUserMenuClose();
+    handleClose();
     onProfileClick();
   };
 
   const handleThemeToggle = () => {
-    handleUserMenuClose();
-    onThemeToggle();
+    handleClose();
+    toggleTheme();
   };
 
   const handleLogout = () => {
-    handleUserMenuClose();
+    handleClose();
     onLogout();
   };
 
@@ -74,47 +77,35 @@ const UserMenu = ({ user, onLogout, onProfileClick, onThemeToggle, isDarkTheme }
       </UserMenuButton>
 
       <Menu
-        anchorEl={userMenuAnchor}
-        open={Boolean(userMenuAnchor)}
-        onClose={handleUserMenuClose}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'right',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'right',
-        }}
+        anchorEl={anchorEl}
+        open={open}
+        onClose={handleClose}
+        onClick={handleClose}
         PaperProps={{
-          sx: {
-            mt: 1,
-            minWidth: 200,
-            backgroundColor: 'rgba(10, 50, 60, 0.95)',
-            backdropFilter: 'blur(10px)',
-          }
+          elevation: 4,
+          sx: { minWidth: 200, mt: 1, borderRadius: 2 },
         }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
         <MenuItem onClick={handleProfileClick}>
           <ListItemIcon>
             <PersonIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText>Profile</ListItemText>
+          Profile
         </MenuItem>
-        
         <MenuItem onClick={handleThemeToggle}>
           <ListItemIcon>
-            {isDarkTheme ? <Brightness7Icon fontSize="small" /> : <Brightness4Icon fontSize="small" />}
+            {mode === 'dark' ? <Brightness7Icon fontSize="small" /> : <Brightness4Icon fontSize="small" />}
           </ListItemIcon>
-          <ListItemText>{isDarkTheme ? 'Light Theme' : 'Dark Theme'}</ListItemText>
+          {mode === 'dark' ? 'Light Mode' : 'Dark Mode'}
         </MenuItem>
-        
-        <Divider sx={{ my: 1 }} />
-        
+        <Divider />
         <MenuItem onClick={handleLogout}>
           <ListItemIcon>
             <LogoutIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText>Logout</ListItemText>
+          Logout
         </MenuItem>
       </Menu>
     </>
