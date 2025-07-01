@@ -15,7 +15,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField
+  TextField,
+  Avatar
 } from '@mui/material';
 import LogoutIcon from '@mui/icons-material/Logout';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
@@ -259,7 +260,15 @@ const Dashboard = () => {
           </Typography>
           
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <AccountCircleIcon sx={{ mr: 1 }} />
+            {user?.picture ? (
+              <Avatar 
+                src={user.picture} 
+                alt={user?.name || user?.email || 'User'}
+                sx={{ mr: 1, width: 32, height: 32 }}
+              />
+            ) : (
+              <AccountCircleIcon sx={{ mr: 1 }} />
+            )}
             <Typography variant="body1" sx={{ mr: 2 }}>
               {user?.name || user?.email || 'Summoner'}
             </Typography>
