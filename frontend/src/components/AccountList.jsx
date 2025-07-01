@@ -85,8 +85,14 @@ const AccountList = ({ accounts, onDelete, onRefresh, isLoading }) => {
   };
 
   const formatRank = (account) => {
-    if (!account.tier || !account.rank) return 'Unranked';
-    return `${account.tier} ${account.rank} (${account.leaguePoints || 0} LP)`;
+    // Try to use the virtual rankDisplay field first
+    if (account.rankDisplay && account.rankDisplay !== 'Unranked') {
+      return `${account.rankDisplay} (${account.lp || 0} LP)`;
+    }
+    
+    // Fallback to manual formatting
+    if (!account.tier || !account.division) return 'Unranked';
+    return `${account.tier} ${account.division} (${account.lp || 0} LP)`;
   };
 
   if (accounts.length === 0) {
@@ -117,7 +123,17 @@ const AccountList = ({ accounts, onDelete, onRefresh, isLoading }) => {
             const severity = getDecaySeverity(account.remainingDecayDays);
             const decayLabel = getDecayLabel(account.remainingDecayDays);
             const iconUrl = getSummonerIconUrlSync(account.summonerIcon);
-            console.log('SummonerIcon:', account.summonerIcon, 'IconURL:', iconUrl);
+            
+            // Debug logging for rank data
+            console.log('Account data:', {
+              id: account._id,
+              gameName: account.gameName,
+              tagLine: account.tagLine,
+              tier: account.tier,
+              division: account.division,
+              lp: account.lp,
+              rankDisplay: account.rankDisplay,
+            });
             
             return (
               <StyledTableRow key={account._id}>
