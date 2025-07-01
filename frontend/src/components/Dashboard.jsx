@@ -33,6 +33,7 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { styled } from '@mui/material/styles';
 import { useAuth0 } from '@auth0/auth0-react';
 import apiClient, { userAPI, accountsAPI, handleAPIError, clearAuthToken } from '../services/api.js';
+import { useUserProfile } from '../context/UserProfileContext.jsx';
 
 // Import custom components
 import AccountList from './AccountList';
@@ -72,7 +73,8 @@ const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
-  const { user, logout, getAccessTokenSilently } = useAuth0();
+  const { logout, getAccessTokenSilently } = useAuth0();
+  const { profile, loading: profileLoading, error: profileError, refresh: refreshProfile } = useUserProfile();
   const [missingNameDialogOpen, setMissingNameDialogOpen] = useState(false);
   const [fallbackName, setFallbackName] = useState('');
   const [pendingLoad, setPendingLoad] = useState(false);
@@ -111,11 +113,11 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    if (user && !missingNameDialogOpen && !pendingLoad) {
+    if (profile && !missingNameDialogOpen && !pendingLoad) {
       loadData();
     }
     // eslint-disable-next-line
-  }, [user, getAccessTokenSilently]);
+  }, [profile, getAccessTokenSilently]);
   
   const handleAddAccount = async (newAccount) => {
     try {
@@ -255,14 +257,20 @@ const Dashboard = () => {
   if (isLoading && accounts.length === 0) {
     return <LoadingState />;
   }
+  if (profileLoading) {
+    return <LoadingState />;
+  }
   
   // Show error state
   if (error) {
-    return <ErrorState error={error} onRetry={() => window.location.reload()} onLogout={handleLogout} />;
+    return <ErrorState error={error} onRetry={handleRetry} onLogout={handleLogout} />;
+  }
+  if (profileError) {
+    return <ErrorState error={profileError} onRetry={handleRetry} onLogout={handleLogout} />;
   }
   
   // Show error state if no user
-  if (!user) {
+  if (!profile) {
     return <NoUserState onLogout={handleLogout} />;
   }
 
@@ -280,7 +288,7 @@ const Dashboard = () => {
           </Typography>
           
           <UserMenu 
-            user={user}
+            user={profile}
             onLogout={handleLogout}
             onProfileClick={handleProfileClick}
             onThemeToggle={handleThemeToggle}
@@ -299,7 +307,7 @@ const Dashboard = () => {
         
         <WelcomeCard elevation={3}>
           <Typography variant="h5" gutterBottom>
-            Welcome back, {user?.name || user?.email || 'Summoner'}!
+            Welcome back, {profile?.name || profile?.email || 'Summoner'}!
           </Typography>
           <Typography variant="body1">
             Track your League of Legends ranked decay across multiple accounts.

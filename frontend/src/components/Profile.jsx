@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -27,6 +27,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { styled } from '@mui/material/styles';
 import { useAuth0 } from '@auth0/auth0-react';
 import { userAPI, handleAPIError } from '../services/api.js';
+import { useUserProfile } from '../context/UserProfileContext.jsx';
 
 // Styled components
 const ProfileContainer = styled(Container)(({ theme }) => ({
@@ -70,12 +71,17 @@ const TabPanel = ({ children, value, index, ...other }) => (
 
 const Profile = ({ onClose }) => {
   const { user, logout } = useAuth0();
+  const { profile, updateProfile, loading: profileLoading } = useUserProfile();
   const [activeTab, setActiveTab] = useState(0);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingField, setEditingField] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
-  const [localUser, setLocalUser] = useState(user);
+  const [localProfile, setLocalProfile] = useState(profile);
+
+  useEffect(() => {
+    setLocalProfile(profile);
+  }, [profile]);
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
@@ -89,19 +95,13 @@ const Profile = ({ onClose }) => {
 
   const handleEditSave = async () => {
     try {
-      // Prepare update data based on the field being edited
       const updateData = {};
       updateData[editingField] = editValue;
-      
-      // Call the API to update the profile
-      const response = await userAPI.updateProfile(updateData);
+      const response = await updateProfile(updateData);
       console.log('Profile update response:', response);
-      
       if (response.success && response.data) {
-        // Update local user state
-        setLocalUser(prev => ({ ...prev, ...response.data }));
+        setLocalProfile(response.data);
       }
-      
       setSnackbar({
         open: true,
         message: `${getFieldLabel(editingField)} updated successfully!`,
@@ -230,8 +230,8 @@ const Profile = ({ onClose }) => {
             <InfoSection>
               <InfoContent>
                 <Avatar
-                  src={localUser?.picture || editValue}
-                  alt={localUser?.name || 'User'}
+                  src={localProfile?.picture || editValue}
+                  alt={localProfile?.name || 'User'}
                   sx={{ width: 64, height: 64 }}
                 />
                 <Box>
@@ -239,12 +239,12 @@ const Profile = ({ onClose }) => {
                     Profile Picture
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    {localUser?.picture ? 'Custom profile picture' : 'No profile picture set'}
+                    {localProfile?.picture ? 'Custom profile picture' : 'No profile picture set'}
                   </Typography>
                 </Box>
               </InfoContent>
               <IconButton 
-                onClick={() => handleEditClick('picture', localUser?.picture)}
+                onClick={() => handleEditClick('picture', localProfile?.picture)}
                 color="primary"
               >
                 <EditIcon />
@@ -259,12 +259,12 @@ const Profile = ({ onClose }) => {
                     Name
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    {localUser?.name || 'No name set'}
+                    {localProfile?.name || 'No name set'}
                   </Typography>
                 </Box>
               </InfoContent>
               <IconButton 
-                onClick={() => handleEditClick('name', localUser?.name)}
+                onClick={() => handleEditClick('name', localProfile?.name)}
                 color="primary"
               >
                 <EditIcon />
@@ -279,12 +279,12 @@ const Profile = ({ onClose }) => {
                     Email Address
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    {localUser?.email || 'No email set'}
+                    {localProfile?.email || 'No email set'}
                   </Typography>
                 </Box>
               </InfoContent>
               <IconButton 
-                onClick={() => handleEditClick('email', localUser?.email)}
+                onClick={() => handleEditClick('email', localProfile?.email)}
                 color="primary"
               >
                 <EditIcon />
