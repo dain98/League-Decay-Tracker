@@ -86,27 +86,25 @@ userSchema.statics.findOrCreateFromAuth0 = async function(auth0User, fallbackNam
           throw new Error('DUPLICATE_EMAIL');
         }
       }
-      // Create new user
+      // Create new user with Auth0 data
       user = new this({
         auth0Id: auth0User.sub,
-        email: auth0User.email,
-        name: auth0User.name,
-        picture: auth0User.picture,
-        emailVerified: auth0User.email_verified,
-        nickname: auth0User.nickname
+        email: email,
+        name: name,
+        picture: picture,
+        emailVerified: emailVerified,
+        nickname: nickname
       });
       await user.save();
     } else {
-      // Update existing user with latest Auth0 data
-      user.email = auth0User.email;
-      user.name = auth0User.name;
-      user.picture = auth0User.picture;
-      user.emailVerified = auth0User.email_verified;
-      user.nickname = auth0User.nickname;
+      // Do NOT overwrite user-editable fields with Auth0 data
+      // Optionally, update emailVerified if it changed
+      if (typeof emailVerified === 'boolean' && user.emailVerified !== emailVerified) {
+        user.emailVerified = emailVerified;
+      }
       user.updatedAt = new Date();
       await user.save();
     }
-    
     return user;
   } catch (error) {
     if (error.message === 'MISSING_NAME' || error.message === 'DUPLICATE_EMAIL') {
