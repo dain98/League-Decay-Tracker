@@ -85,6 +85,12 @@ export const userAPI = {
     const response = await apiClient.get('/users/me/stats');
     return response.data;
   },
+
+  // Delete user account
+  deleteMe: async () => {
+    const response = await apiClient.delete('/users/me');
+    return response.data;
+  },
 };
 
 // League Accounts API

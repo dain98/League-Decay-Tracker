@@ -24,6 +24,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import SettingsIcon from '@mui/icons-material/Settings';
 import PersonIcon from '@mui/icons-material/Person';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { styled } from '@mui/material/styles';
 import { useAuth0 } from '@auth0/auth0-react';
 import { userAPI, handleAPIError } from '../services/api.js';
@@ -78,6 +79,8 @@ const Profile = ({ onClose }) => {
   const [editValue, setEditValue] = useState('');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [localProfile, setLocalProfile] = useState(profile);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     setLocalProfile(profile);
@@ -152,12 +155,11 @@ const Profile = ({ onClose }) => {
 
   const validateField = (field, value) => {
     if (!value.trim()) return `${getFieldLabel(field)} cannot be empty`;
-    
     if (field === 'email') {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      // Robust email regex
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
       if (!emailRegex.test(value)) return 'Please enter a valid email address';
     }
-    
     if (field === 'picture') {
       try {
         new URL(value);
@@ -165,7 +167,6 @@ const Profile = ({ onClose }) => {
         return 'Please enter a valid URL';
       }
     }
-    
     return null;
   };
 
@@ -180,6 +181,32 @@ const Profile = ({ onClose }) => {
       return;
     }
     handleEditSave();
+  };
+
+  // Delete account logic
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      // Call backend to delete account
+      await userAPI.deleteMe();
+      setSnackbar({
+        open: true,
+        message: 'Account deleted successfully. Logging out...',
+        severity: 'success'
+      });
+      setTimeout(() => {
+        logout({ logoutParams: { returnTo: window.location.origin + '/login' } });
+      }, 2000);
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: `Failed to delete account: ${handleAPIError(error)}`,
+        severity: 'error'
+      });
+    } finally {
+      setDeleting(false);
+      setDeleteDialogOpen(false);
+    }
   };
 
   return (
@@ -290,6 +317,19 @@ const Profile = ({ onClose }) => {
                 <EditIcon />
               </IconButton>
             </InfoSection>
+
+            {/* Delete Account Button */}
+            <Box sx={{ mt: 6, display: 'flex', justifyContent: 'center' }}>
+              <Button
+                variant="contained"
+                color="error"
+                startIcon={<DeleteIcon />}
+                sx={{ fontWeight: 'bold', letterSpacing: 1, fontSize: 16, p: 2, textTransform: 'uppercase' }}
+                onClick={() => setDeleteDialogOpen(true)}
+              >
+                DELETE ACCOUNT
+              </Button>
+            </Box>
           </TabPanel>
 
           <TabPanel value={activeTab} index={1}>
@@ -328,6 +368,29 @@ const Profile = ({ onClose }) => {
           </Button>
           <Button onClick={handleEditSaveWithValidation} variant="contained">
             Save
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+        <DialogTitle sx={{ color: 'error.main', fontWeight: 'bold', textTransform: 'uppercase' }}>
+          Confirm Account Deletion
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'error.main', mb: 2 }}>
+            THIS ACTION CANNOT BE UNDONE.
+          </Typography>
+          <Typography variant="body2">
+            Are you sure you want to <b>permanently delete</b> your account and all associated data? This cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)} disabled={deleting}>
+            Cancel
+          </Button>
+          <Button onClick={handleDeleteAccount} color="error" variant="contained" disabled={deleting}>
+            {deleting ? 'Deleting...' : 'DELETE ACCOUNT'}
           </Button>
         </DialogActions>
       </Dialog>
