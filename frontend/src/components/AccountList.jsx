@@ -28,14 +28,10 @@ import { getSummonerIconUrlSync } from '../services/ddragon.js';
 // Styled components
 const StyledTableRow = styled(TableRow)(({ theme }) => ({
   '&:nth-of-type(odd)': {
-    backgroundColor: theme.palette.mode === 'dark'
-      ? 'rgba(10, 50, 60, 0.1)'
-      : theme.palette.action.hover,
+    backgroundColor: 'rgba(10, 50, 60, 0.1)',
   },
   '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark'
-      ? 'rgba(10, 50, 60, 0.2)'
-      : theme.palette.action.selected,
+    backgroundColor: 'rgba(10, 50, 60, 0.2)',
   },
 }));
 
@@ -216,13 +212,13 @@ const AccountList = ({ accounts, onDelete, onRefresh, isLoading }) => {
     <StyledTableContainer component={Paper} elevation={3}>
       <Table>
         <TableHead>
-          <TableRow sx={{ backgroundColor: theme.palette.mode === 'dark' ? 'rgba(10, 50, 60, 0.3)' : theme.palette.grey[200] }}>
-            <TableCell sx={{ fontWeight: 'bold', color: theme.palette.text.primary }}>Account</TableCell>
-            <TableCell sx={{ fontWeight: 'bold', color: theme.palette.text.primary }}>Region</TableCell>
-            <TableCell sx={{ fontWeight: 'bold', color: theme.palette.text.primary }}>Current Rank</TableCell>
-            <TableCell sx={{ fontWeight: 'bold', color: theme.palette.text.primary }}>Decay Status</TableCell>
-            <TableCell sx={{ fontWeight: 'bold', color: theme.palette.text.primary }}>Last Updated</TableCell>
-            <TableCell sx={{ fontWeight: 'bold', color: theme.palette.text.primary }}>Actions</TableCell>
+          <TableRow>
+            <TableCell sx={{ fontWeight: 'bold' }}>Account</TableCell>
+            <TableCell sx={{ fontWeight: 'bold' }}>Region</TableCell>
+            <TableCell sx={{ fontWeight: 'bold' }}>Current Rank</TableCell>
+            <TableCell sx={{ fontWeight: 'bold' }}>Decay Status</TableCell>
+            <TableCell sx={{ fontWeight: 'bold' }}>Last Updated</TableCell>
+            <TableCell sx={{ fontWeight: 'bold' }}>Actions</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
