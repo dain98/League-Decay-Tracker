@@ -47,6 +47,7 @@ const AccountList = ({ accounts, onDelete, onRefresh, isLoading }) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [accountToDelete, setAccountToDelete] = React.useState(null);
   const [refreshCooldowns, setRefreshCooldowns] = React.useState({});
+  const [tooltipTime, setTooltipTime] = React.useState({});
 
   // 5 minutes in milliseconds
   const REFRESH_COOLDOWN_MS = 5 * 60 * 1000;
@@ -68,6 +69,42 @@ const AccountList = ({ accounts, onDelete, onRefresh, isLoading }) => {
     });
     setRefreshCooldowns(initialCooldowns);
   }, [accounts]);
+
+  // Update tooltip time every second for accounts on cooldown
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const newTooltipTime = {};
+      
+      Object.keys(refreshCooldowns).forEach(accountId => {
+        const lastRefresh = refreshCooldowns[accountId];
+        const timeSinceLastRefresh = now - lastRefresh;
+        
+        if (timeSinceLastRefresh < REFRESH_COOLDOWN_MS) {
+          const remainingSeconds = Math.ceil((REFRESH_COOLDOWN_MS - timeSinceLastRefresh) / 1000);
+          const remainingMinutes = Math.floor(remainingSeconds / 60);
+          const remainingSecondsOnly = remainingSeconds % 60;
+          
+          if (remainingMinutes > 0) {
+            newTooltipTime[accountId] = `Refresh available in ${remainingMinutes}m ${remainingSecondsOnly}s`;
+          } else {
+            newTooltipTime[accountId] = `Refresh available in ${remainingSecondsOnly}s`;
+          }
+        } else {
+          // Remove from cooldowns if time has passed
+          setRefreshCooldowns(prev => {
+            const newCooldowns = { ...prev };
+            delete newCooldowns[accountId];
+            return newCooldowns;
+          });
+        }
+      });
+      
+      setTooltipTime(newTooltipTime);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [refreshCooldowns]);
 
   const handleDeleteClick = (accountId) => {
     setAccountToDelete(accountId);
@@ -116,20 +153,8 @@ const AccountList = ({ accounts, onDelete, onRefresh, isLoading }) => {
   const getRefreshTooltip = (accountId) => {
     if (isLoading) return "Refreshing...";
     
-    const now = Date.now();
-    const lastRefresh = refreshCooldowns[accountId] || 0;
-    const timeSinceLastRefresh = now - lastRefresh;
-    
-    if (timeSinceLastRefresh < REFRESH_COOLDOWN_MS) {
-      const remainingSeconds = Math.ceil((REFRESH_COOLDOWN_MS - timeSinceLastRefresh) / 1000);
-      const remainingMinutes = Math.floor(remainingSeconds / 60);
-      const remainingSecondsOnly = remainingSeconds % 60;
-      
-      if (remainingMinutes > 0) {
-        return `Refresh available in ${remainingMinutes}m ${remainingSecondsOnly}s`;
-      } else {
-        return `Refresh available in ${remainingSecondsOnly}s`;
-      }
+    if (isRefreshDisabled(accountId)) {
+      return tooltipTime[accountId] || "Calculating...";
     }
     
     return "Refresh account data";
