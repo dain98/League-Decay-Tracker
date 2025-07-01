@@ -1,7 +1,8 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
 import { authenticateToken } from '../middleware/auth.js';
-import { User } from '../database/index.js';
+import { User, LeagueAccount } from '../database/index.js';
+import axios from 'axios';
 
 const router = express.Router();
 
@@ -198,7 +199,7 @@ router.get('/me/stats', authenticateToken, async (req, res) => {
   }
 });
 
-// Delete user account (soft delete)
+// Delete user account (hard delete, cascade league accounts, delete Auth0 user)
 router.delete('/me', authenticateToken, async (req, res) => {
   try {
     const user = await User.findOne({ auth0Id: req.user.sub });
@@ -209,11 +210,44 @@ router.delete('/me', authenticateToken, async (req, res) => {
       });
     }
 
-    // In a real application, you might want to implement soft delete
-    // For now, we'll just return success
+    // 1. Delete all league accounts for this user
+    await LeagueAccount.deleteMany({ userId: user._id });
+
+    // 2. Delete the user document
+    await user.deleteOne();
+
+    // 3. Delete the Auth0 user via Management API
+    try {
+      // Get Auth0 Management API token
+      const tokenResponse = await axios.post(
+        `https://${process.env.AUTH0_DOMAIN}/oauth/token`,
+        {
+          client_id: process.env.AUTH0_MGMT_CLIENT_ID,
+          client_secret: process.env.AUTH0_MGMT_CLIENT_SECRET,
+          audience: `https://${process.env.AUTH0_DOMAIN}/api/v2/`,
+          grant_type: 'client_credentials'
+        },
+        { headers: { 'content-type': 'application/json' } }
+      );
+      const mgmtToken = tokenResponse.data.access_token;
+      // Delete Auth0 user
+      await axios.delete(
+        `https://${process.env.AUTH0_DOMAIN}/api/v2/users/${encodeURIComponent(user.auth0Id)}`,
+        { headers: { Authorization: `Bearer ${mgmtToken}` } }
+      );
+    } catch (auth0Err) {
+      console.error('Error deleting Auth0 user:', auth0Err.response?.data || auth0Err.message);
+      // Still return success for local deletion, but include Auth0 error
+      return res.status(200).json({
+        success: true,
+        message: 'User and league accounts deleted locally, but failed to delete Auth0 user.',
+        auth0Error: auth0Err.response?.data || auth0Err.message
+      });
+    }
+
     res.json({
       success: true,
-      message: 'User account deletion requested'
+      message: 'User, league accounts, and Auth0 account deleted.'
     });
   } catch (error) {
     console.error('Error deleting user:', error);
