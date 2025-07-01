@@ -46,6 +46,28 @@ const DecayChip = styled(Chip)(({ theme, severity }) => ({
 const AccountList = ({ accounts, onDelete, onRefresh, isLoading }) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [accountToDelete, setAccountToDelete] = React.useState(null);
+  const [refreshCooldowns, setRefreshCooldowns] = React.useState({});
+
+  // 5 minutes in milliseconds
+  const REFRESH_COOLDOWN_MS = 5 * 60 * 1000;
+
+  // Initialize cooldowns based on account lastUpdated timestamps
+  React.useEffect(() => {
+    const initialCooldowns = {};
+    accounts.forEach(account => {
+      if (account.lastUpdated) {
+        const lastUpdateTime = new Date(account.lastUpdated).getTime();
+        const now = Date.now();
+        const timeSinceLastUpdate = now - lastUpdateTime;
+        
+        // If the account was updated less than 5 minutes ago, set a cooldown
+        if (timeSinceLastUpdate < REFRESH_COOLDOWN_MS) {
+          initialCooldowns[account._id] = lastUpdateTime;
+        }
+      }
+    });
+    setRefreshCooldowns(initialCooldowns);
+  }, [accounts]);
 
   const handleDeleteClick = (accountId) => {
     setAccountToDelete(accountId);
@@ -63,6 +85,54 @@ const AccountList = ({ accounts, onDelete, onRefresh, isLoading }) => {
   const handleDeleteCancel = () => {
     setDeleteDialogOpen(false);
     setAccountToDelete(null);
+  };
+
+  const handleRefreshClick = (accountId) => {
+    const now = Date.now();
+    const lastRefresh = refreshCooldowns[accountId] || 0;
+    const timeSinceLastRefresh = now - lastRefresh;
+
+    if (timeSinceLastRefresh < REFRESH_COOLDOWN_MS) {
+      const remainingTime = Math.ceil((REFRESH_COOLDOWN_MS - timeSinceLastRefresh) / 1000 / 60);
+      alert(`Please wait ${remainingTime} more minute(s) before refreshing this account again.`);
+      return;
+    }
+
+    // Set cooldown and call refresh
+    setRefreshCooldowns(prev => ({
+      ...prev,
+      [accountId]: now
+    }));
+    onRefresh(accountId);
+  };
+
+  const isRefreshDisabled = (accountId) => {
+    const now = Date.now();
+    const lastRefresh = refreshCooldowns[accountId] || 0;
+    const timeSinceLastRefresh = now - lastRefresh;
+    return timeSinceLastRefresh < REFRESH_COOLDOWN_MS;
+  };
+
+  const getRefreshTooltip = (accountId) => {
+    if (isLoading) return "Refreshing...";
+    
+    const now = Date.now();
+    const lastRefresh = refreshCooldowns[accountId] || 0;
+    const timeSinceLastRefresh = now - lastRefresh;
+    
+    if (timeSinceLastRefresh < REFRESH_COOLDOWN_MS) {
+      const remainingSeconds = Math.ceil((REFRESH_COOLDOWN_MS - timeSinceLastRefresh) / 1000);
+      const remainingMinutes = Math.floor(remainingSeconds / 60);
+      const remainingSecondsOnly = remainingSeconds % 60;
+      
+      if (remainingMinutes > 0) {
+        return `Refresh available in ${remainingMinutes}m ${remainingSecondsOnly}s`;
+      } else {
+        return `Refresh available in ${remainingSecondsOnly}s`;
+      }
+    }
+    
+    return "Refresh account data";
   };
 
   const getDecaySeverity = (daysRemaining) => {
@@ -175,12 +245,16 @@ const AccountList = ({ accounts, onDelete, onRefresh, isLoading }) => {
                 
                 <TableCell>
                   <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Tooltip title="Refresh account data">
+                    <Tooltip title={getRefreshTooltip(account._id)}>
                       <IconButton 
                         size="small" 
-                        color="primary"
-                        onClick={() => onRefresh(account._id)}
-                        disabled={isLoading}
+                        color={isRefreshDisabled(account._id) ? "disabled" : "primary"}
+                        onClick={() => handleRefreshClick(account._id)}
+                        disabled={isRefreshDisabled(account._id) || isLoading}
+                        sx={{
+                          opacity: isRefreshDisabled(account._id) ? 0.5 : 1,
+                          transition: 'opacity 0.2s ease-in-out'
+                        }}
                       >
                         <RefreshIcon />
                       </IconButton>
