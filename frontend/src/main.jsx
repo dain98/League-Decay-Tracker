@@ -5,22 +5,19 @@ import App from './App.jsx'
 import './index.css'
 import { auth0Config } from './config/auth0.js'
 import { UserProfileProvider } from './context/UserProfileContext.jsx'
-import { ThemeModeProvider } from './context/ThemeContext.jsx'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <ThemeModeProvider>
-      <Auth0Provider
-        domain={auth0Config.domain}
-        clientId={auth0Config.clientId}
-        authorizationParams={auth0Config.authorizationParams}
-        cacheLocation={auth0Config.cacheLocation}
-        useRefreshTokens={auth0Config.useRefreshTokens}
-      >
-        <UserProfileProvider>
-          <App />
-        </UserProfileProvider>
-      </Auth0Provider>
-    </ThemeModeProvider>
+    <Auth0Provider
+      domain={auth0Config.domain}
+      clientId={auth0Config.clientId}
+      authorizationParams={auth0Config.authorizationParams}
+      cacheLocation={auth0Config.cacheLocation}
+      useRefreshTokens={auth0Config.useRefreshTokens}
+    >
+      <UserProfileProvider>
+        <App />
+      </UserProfileProvider>
+    </Auth0Provider>
   </React.StrictMode>,
 )

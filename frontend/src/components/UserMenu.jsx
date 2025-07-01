@@ -33,7 +33,6 @@ const UserMenuButton = styled(Box)(({ theme }) => ({
 const UserMenu = ({ user, onLogout, onProfileClick }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
-  const { mode, toggleTheme } = useThemeMode();
 
   const handleUserMenuClick = (event) => {
     setAnchorEl(event.currentTarget);
@@ -46,11 +45,6 @@ const UserMenu = ({ user, onLogout, onProfileClick }) => {
   const handleProfileClick = () => {
     handleClose();
     onProfileClick();
-  };
-
-  const handleThemeToggle = () => {
-    handleClose();
-    toggleTheme();
   };
 
   const handleLogout = () => {
