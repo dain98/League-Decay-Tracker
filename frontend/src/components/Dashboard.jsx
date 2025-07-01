@@ -16,11 +16,20 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  Avatar
+  Avatar,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  Divider
 } from '@mui/material';
 import LogoutIcon from '@mui/icons-material/Logout';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import PersonIcon from '@mui/icons-material/Person';
+import Brightness4Icon from '@mui/icons-material/Brightness4';
+import Brightness7Icon from '@mui/icons-material/Brightness7';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { styled } from '@mui/material/styles';
 import { useAuth0 } from '@auth0/auth0-react';
 import apiClient, { userAPI, accountsAPI, handleAPIError, clearAuthToken } from '../services/api.js';
@@ -42,6 +51,18 @@ const WelcomeCard = styled(Paper)(({ theme }) => ({
   backgroundColor: 'rgba(10, 50, 60, 0.8)',
 }));
 
+const UserMenuButton = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  cursor: 'pointer',
+  padding: theme.spacing(1, 2),
+  borderRadius: theme.spacing(1),
+  transition: 'background-color 0.2s ease-in-out',
+  '&:hover': {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+}));
+
 const Dashboard = () => {
   const [accounts, setAccounts] = useState([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -52,6 +73,8 @@ const Dashboard = () => {
   const [missingNameDialogOpen, setMissingNameDialogOpen] = useState(false);
   const [fallbackName, setFallbackName] = useState('');
   const [pendingLoad, setPendingLoad] = useState(false);
+  const [userMenuAnchor, setUserMenuAnchor] = useState(null);
+  const [isDarkTheme, setIsDarkTheme] = useState(true); // Default to dark theme
   
   const loadData = async (fallbackNameParam) => {
     try {
@@ -171,15 +194,44 @@ const Dashboard = () => {
     clearAuthToken();
     logout({ logoutParams: { returnTo: window.location.origin + '/login' } });
   };
-  
-  // Find account with most urgent decay
-  const getMostUrgentAccount = () => {
-    if (accounts.length === 0) return null;
-    return accounts.reduce((prev, current) => 
-      (prev.remainingDecayDays < current.remainingDecayDays) ? prev : current
-    );
+
+  const handleUserMenuClick = (event) => {
+    setUserMenuAnchor(event.currentTarget);
   };
-  
+
+  const handleUserMenuClose = () => {
+    setUserMenuAnchor(null);
+  };
+
+  const handleProfileClick = () => {
+    handleUserMenuClose();
+    // TODO: Implement profile page/modal
+    setSnackbar({
+      open: true,
+      message: 'Profile feature coming soon!',
+      severity: 'info'
+    });
+  };
+
+  const handleThemeToggle = () => {
+    setIsDarkTheme(!isDarkTheme);
+    // TODO: Implement theme switching
+    setSnackbar({
+      open: true,
+      message: `Switched to ${!isDarkTheme ? 'dark' : 'light'} theme!`,
+      severity: 'info'
+    });
+  };
+
+  const getMostUrgentAccount = () => {
+    return accounts.reduce((urgent, account) => {
+      if (!urgent || account.remainingDecayDays < urgent.remainingDecayDays) {
+        return account;
+      }
+      return urgent;
+    }, null);
+  };
+
   const urgentAccount = getMostUrgentAccount();
   
   // Handler for submitting fallback name
@@ -259,7 +311,7 @@ const Dashboard = () => {
             Ranked Decay Tracker
           </Typography>
           
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <UserMenuButton onClick={handleUserMenuClick}>
             {user?.picture ? (
               <Avatar 
                 src={user.picture} 
@@ -269,13 +321,56 @@ const Dashboard = () => {
             ) : (
               <AccountCircleIcon sx={{ mr: 1 }} />
             )}
-            <Typography variant="body1" sx={{ mr: 2 }}>
+            <Typography variant="body1" sx={{ mr: 1 }}>
               {user?.name || user?.email || 'Summoner'}
             </Typography>
-            <IconButton color="inherit" onClick={handleLogout}>
-              <LogoutIcon />
-            </IconButton>
-          </Box>
+            <KeyboardArrowDownIcon />
+          </UserMenuButton>
+
+          <Menu
+            anchorEl={userMenuAnchor}
+            open={Boolean(userMenuAnchor)}
+            onClose={handleUserMenuClose}
+            anchorOrigin={{
+              vertical: 'bottom',
+              horizontal: 'right',
+            }}
+            transformOrigin={{
+              vertical: 'top',
+              horizontal: 'right',
+            }}
+            PaperProps={{
+              sx: {
+                mt: 1,
+                minWidth: 200,
+                backgroundColor: 'rgba(10, 50, 60, 0.95)',
+                backdropFilter: 'blur(10px)',
+              }
+            }}
+          >
+            <MenuItem onClick={handleProfileClick}>
+              <ListItemIcon>
+                <PersonIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText>Profile</ListItemText>
+            </MenuItem>
+            
+            <MenuItem onClick={handleThemeToggle}>
+              <ListItemIcon>
+                {isDarkTheme ? <Brightness7Icon fontSize="small" /> : <Brightness4Icon fontSize="small" />}
+              </ListItemIcon>
+              <ListItemText>{isDarkTheme ? 'Light Theme' : 'Dark Theme'}</ListItemText>
+            </MenuItem>
+            
+            <Divider sx={{ my: 1 }} />
+            
+            <MenuItem onClick={handleLogout}>
+              <ListItemIcon>
+                <LogoutIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText>Logout</ListItemText>
+            </MenuItem>
+          </Menu>
         </Toolbar>
       </AppBar>
       

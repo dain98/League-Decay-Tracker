@@ -23,3 +23,4 @@ export const auth0Config = {
 // 7. Add your application URL to Allowed Logout URLs: https://your-ngrok-url.ngrok-free.app/login
 // 8. Add your application URL to Allowed Web Origins: https://your-ngrok-url.ngrok-free.app
 // 9. IMPORTANT: Enable "Offline Access" in OAuth settings for refresh tokens
+ 

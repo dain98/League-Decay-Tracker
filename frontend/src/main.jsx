@@ -14,7 +14,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       cacheLocation={auth0Config.cacheLocation}
       useRefreshTokens={auth0Config.useRefreshTokens}
     >
-      <App />
+    <App />
     </Auth0Provider>
   </React.StrictMode>,
 )

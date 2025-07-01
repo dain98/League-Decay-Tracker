@@ -158,3 +158,4 @@ leagueAccountSchema.methods.updateRankInfo = async function(tier, division, lp) 
 const LeagueAccount = mongoose.model('LeagueAccount', leagueAccountSchema);
 
 export default LeagueAccount; 
+ 

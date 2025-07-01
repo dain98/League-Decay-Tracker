@@ -137,3 +137,4 @@ Once Auth0 is working, you can:
 3. Implement role-based access control
 4. Set up user profile management
 5. Configure email verification and password policies 
+ 

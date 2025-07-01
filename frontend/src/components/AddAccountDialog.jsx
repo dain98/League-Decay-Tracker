@@ -203,7 +203,7 @@ const AddAccountDialog = ({ open, onClose, onAdd, isLoading }) => {
                 ))}
               </Select>
             </FormControl>
-            
+          
             <TextField
               label="Remaining Decay Days"
               type="number"
