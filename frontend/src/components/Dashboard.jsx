@@ -30,7 +30,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import { styled } from '@mui/material/styles';
+import { styled, useTheme } from '@mui/material/styles';
 import { useAuth0 } from '@auth0/auth0-react';
 import apiClient, { userAPI, accountsAPI, handleAPIError, clearAuthToken } from '../services/api.js';
 import { useUserProfile } from '../context/UserProfileContext.jsx';
@@ -81,6 +81,7 @@ const Dashboard = () => {
   const [userMenuAnchor, setUserMenuAnchor] = useState(null);
   const [isDarkTheme, setIsDarkTheme] = useState(true); // Default to dark theme
   const [showProfile, setShowProfile] = useState(false);
+  const theme = useTheme();
   
   const loadData = async (fallbackNameParam) => {
     try {
@@ -283,7 +284,7 @@ const Dashboard = () => {
     <>
       <AppBar position="fixed">
         <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
             Ranked Decay Tracker
           </Typography>
           
@@ -306,16 +307,18 @@ const Dashboard = () => {
         )}
         
         <WelcomeCard elevation={3}>
-          <Typography variant="h5" gutterBottom>
+          <Typography variant="h5" gutterBottom sx={{ color: theme.palette.text.primary }}>
             Welcome back, {profile?.name || profile?.email || 'Summoner'}!
           </Typography>
-          <Typography variant="body1">
+          <Typography variant="body1" sx={{ color: theme.palette.text.primary }}>
             Track your League of Legends ranked decay across multiple accounts.
           </Typography>
         </WelcomeCard>
         
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-          <Typography variant="h5">Your Accounts ({accounts.length})</Typography>
+          <Typography variant="h5" sx={{ color: theme.palette.text.primary }}>
+            Your Accounts ({accounts.length})
+          </Typography>
           <Button 
             variant="contained" 
             color="primary" 
