@@ -39,6 +39,7 @@ import AccountList from './AccountList';
 import AddAccountDialog from './AddAccountDialog';
 import GlobalDecayCountdown from './GlobalDecayCountdown';
 import UserMenu from './UserMenu';
+import Profile from './Profile';
 import { LoadingState, ErrorState, NoUserState, EmptyAccountsState } from './DashboardStates';
 
 // Styled components
@@ -77,6 +78,7 @@ const Dashboard = () => {
   const [pendingLoad, setPendingLoad] = useState(false);
   const [userMenuAnchor, setUserMenuAnchor] = useState(null);
   const [isDarkTheme, setIsDarkTheme] = useState(true); // Default to dark theme
+  const [showProfile, setShowProfile] = useState(false);
   
   const loadData = async (fallbackNameParam) => {
     try {
@@ -206,13 +208,11 @@ const Dashboard = () => {
   };
 
   const handleProfileClick = () => {
-    handleUserMenuClose();
-    // TODO: Implement profile page/modal
-    setSnackbar({
-      open: true,
-      message: 'Profile feature coming soon!',
-      severity: 'info'
-    });
+    setShowProfile(true);
+  };
+
+  const handleProfileClose = () => {
+    setShowProfile(false);
   };
 
   const handleThemeToggle = () => {
@@ -264,6 +264,11 @@ const Dashboard = () => {
   // Show error state if no user
   if (!user) {
     return <NoUserState onLogout={handleLogout} />;
+  }
+
+  // Show Profile page
+  if (showProfile) {
+    return <Profile onClose={handleProfileClose} />;
   }
   
   return (
