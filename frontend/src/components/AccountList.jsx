@@ -28,18 +28,30 @@ import { getSummonerIconUrlSync } from '../services/ddragon.js';
 // Styled components
 const StyledTableRow = styled(TableRow)(({ theme }) => ({
   '&:nth-of-type(odd)': {
-    backgroundColor: 'rgba(10, 50, 60, 0.1)',
+    backgroundColor: theme.palette.mode === 'dark'
+      ? 'rgba(10, 50, 60, 0.1)'
+      : theme.palette.action.hover,
   },
   '&:hover': {
-    backgroundColor: 'rgba(10, 50, 60, 0.2)',
+    backgroundColor: theme.palette.mode === 'dark'
+      ? 'rgba(10, 50, 60, 0.2)'
+      : theme.palette.action.selected,
   },
 }));
 
+const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
+  backgroundColor: theme.palette.background.paper,
+}));
+
 const DecayChip = styled(Chip)(({ theme, severity }) => ({
-  backgroundColor: severity === 'critical' ? '#d32f2f' : 
-                   severity === 'warning' ? '#ed6c02' : 
-                   severity === 'info' ? '#0288d1' : '#2e7d32',
-  color: 'white',
+  backgroundColor: severity === 'critical' ? theme.palette.error.main : 
+                   severity === 'warning' ? theme.palette.warning.main : 
+                   severity === 'info' ? theme.palette.info.main : theme.palette.success.main,
+  color: theme.palette.getContrastText(
+    severity === 'critical' ? theme.palette.error.main : 
+    severity === 'warning' ? theme.palette.warning.main : 
+    severity === 'info' ? theme.palette.info.main : theme.palette.success.main
+  ),
   fontWeight: 'bold',
 }));
 
@@ -201,7 +213,7 @@ const AccountList = ({ accounts, onDelete, onRefresh, isLoading }) => {
   }
 
   return (
-    <TableContainer component={Paper} elevation={3}>
+    <StyledTableContainer component={Paper} elevation={3}>
       <Table>
         <TableHead>
           <TableRow sx={{ backgroundColor: 'rgba(10, 50, 60, 0.3)' }}>
@@ -317,7 +329,7 @@ const AccountList = ({ accounts, onDelete, onRefresh, isLoading }) => {
           </Button>
         </DialogActions>
       </Dialog>
-    </TableContainer>
+    </StyledTableContainer>
   );
 };
 
