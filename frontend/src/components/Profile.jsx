@@ -94,6 +94,7 @@ const Profile = ({ onClose }) => {
       
       // Call the API to update the profile
       const response = await userAPI.updateProfile(updateData);
+      console.log('Profile update response:', response);
       
       // Update the local Auth0 user data to reflect changes immediately
       if (response.success && response.data) {
@@ -110,13 +111,12 @@ const Profile = ({ onClose }) => {
       setEditDialogOpen(false);
       
       // Force a page refresh to get updated Auth0 data
-      // This is a simple solution - in a more sophisticated app, you might
-      // want to implement a more elegant state management solution
       setTimeout(() => {
         window.location.reload();
       }, 1500);
       
     } catch (error) {
+      console.error('Profile update error:', error);
       setSnackbar({
         open: true,
         message: `Failed to update ${getFieldLabel(editingField)}: ${handleAPIError(error)}`,
