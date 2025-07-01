@@ -5,6 +5,7 @@ import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import AuthGuard from './components/AuthGuard';
+import { useDataDragon } from './hooks/useDataDragon.js';
 import './App.css';
 
 // Create a dark theme (Riot-inspired theme)
@@ -44,6 +45,19 @@ const theme = createTheme({
 });
 
 function App() {
+  // Initialize Data Dragon service
+  const { version, isLoading: ddragonLoading, error: ddragonError } = useDataDragon();
+
+  // Log Data Dragon status for debugging
+  React.useEffect(() => {
+    if (version) {
+      console.log('App: Data Dragon version loaded:', version);
+    }
+    if (ddragonError) {
+      console.warn('App: Data Dragon error:', ddragonError);
+    }
+  }, [version, ddragonError]);
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />

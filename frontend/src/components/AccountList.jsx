@@ -23,6 +23,7 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { styled } from '@mui/material/styles';
+import { getSummonerIconUrlSync } from '../services/ddragon.js';
 
 // Styled components
 const StyledTableRow = styled(TableRow)(({ theme }) => ({
@@ -115,7 +116,7 @@ const AccountList = ({ accounts, onDelete, onRefresh, isLoading }) => {
           {accounts.map((account) => {
             const severity = getDecaySeverity(account.remainingDecayDays);
             const decayLabel = getDecayLabel(account.remainingDecayDays);
-            const iconUrl = `https://ddragon.leagueoflegends.com/cdn/latest/img/profileicon/${account.summonerIcon}.png`;
+            const iconUrl = getSummonerIconUrlSync(account.summonerIcon);
             console.log('SummonerIcon:', account.summonerIcon, 'IconURL:', iconUrl);
             
             return (
