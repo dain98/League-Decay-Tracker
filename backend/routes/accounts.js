@@ -99,7 +99,9 @@ router.post('/', [
   body('gameName').isString().trim().isLength({ min: 1, max: 50 }).withMessage('Game name is required'),
   body('tagLine').isString().trim().isLength({ min: 1, max: 10 }).withMessage('Tag line is required'),
   body('region').isIn(['NA1', 'EUN1', 'EUW1', 'KR', 'BR1', 'LA1', 'LA2', 'OC1', 'TR1', 'RU', 'JP1', 'PH2', 'SG2', 'TH2', 'VN2', 'TW2']).withMessage('Invalid region'),
-  body('remainingDecayDays').isInt({ min: 0, max: 28 }).withMessage('Remaining decay days must be between 0 and 28')
+  body('remainingDecayDays').isInt({ min: -1, max: 28 }).withMessage('Remaining decay days must be between -1 (immune) and 28'),
+  body('isSpecial').optional().isBoolean().withMessage('isSpecial must be a boolean'),
+  body('isDecaying').optional().isBoolean().withMessage('isDecaying must be a boolean')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -119,7 +121,7 @@ router.post('/', [
       });
     }
 
-    const { gameName, tagLine, region, remainingDecayDays } = req.body;
+    const { gameName, tagLine, region, remainingDecayDays, isSpecial, isDecaying } = req.body;
 
     // Check if account already exists for this user
     const existingAccount = await LeagueAccount.findOne({
@@ -185,6 +187,8 @@ router.post('/', [
         division: rankInfo.division || null,
         lp: rankInfo.lp || 0,
         remainingDecayDays: Number(remainingDecayDays),
+        isSpecial: isSpecial || false,
+        isDecaying: isDecaying || false,
         lastSoloDuoGameId: latestGameId || 'NO_GAMES_YET'
       });
 

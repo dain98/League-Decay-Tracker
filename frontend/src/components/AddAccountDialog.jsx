@@ -13,7 +13,9 @@ import {
   Box,
   Typography,
   Alert,
-  CircularProgress
+  CircularProgress,
+  FormControlLabel,
+  Checkbox
 } from '@mui/material';
 
 const regions = [
@@ -40,7 +42,8 @@ const AddAccountDialog = ({ open, onClose, onAdd, isLoading }) => {
     gameName: '',
     tagLine: '',
     region: 'NA1',
-    remainingDecayDays: ''
+    remainingDecayDays: '',
+    isMaxDecayedApex: false
   });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -76,6 +79,11 @@ const AddAccountDialog = ({ open, onClose, onAdd, isLoading }) => {
       newErrors.remainingDecayDays = 'Enter a number between -1 (immune) and 28';
     }
     
+    // If max decayed apex is checked, override decay days validation
+    if (formData.isMaxDecayedApex) {
+      // Skip decay days validation for max decayed apex accounts
+    }
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -96,7 +104,9 @@ const AddAccountDialog = ({ open, onClose, onAdd, isLoading }) => {
         tagLine: formData.tagLine.trim(),
         region: formData.region,
         riotId: `${formData.gameName.trim()}#${formData.tagLine.trim()}`,
-        remainingDecayDays: Number(formData.remainingDecayDays)
+        remainingDecayDays: formData.isMaxDecayedApex ? -1 : Number(formData.remainingDecayDays),
+        isSpecial: formData.isMaxDecayedApex,
+        isDecaying: formData.isMaxDecayedApex
       };
 
       await onAdd(accountData);
@@ -106,7 +116,8 @@ const AddAccountDialog = ({ open, onClose, onAdd, isLoading }) => {
         gameName: '',
         tagLine: '',
         region: 'NA1',
-        remainingDecayDays: ''
+        remainingDecayDays: '',
+        isMaxDecayedApex: false
       });
       setErrors({});
       
@@ -124,7 +135,8 @@ const AddAccountDialog = ({ open, onClose, onAdd, isLoading }) => {
         gameName: '',
         tagLine: '',
         region: 'NA1',
-        remainingDecayDays: ''
+        remainingDecayDays: '',
+        isMaxDecayedApex: false
       });
       setErrors({});
       onClose();
@@ -211,10 +223,30 @@ const AddAccountDialog = ({ open, onClose, onAdd, isLoading }) => {
               onChange={handleInputChange('remainingDecayDays')}
               error={!!errors.remainingDecayDays}
               helperText={errors.remainingDecayDays || 'Enter a number between -1 (immune) and 28'}
-              disabled={isSubmitting}
+              disabled={isSubmitting || formData.isMaxDecayedApex}
               fullWidth
-              required
+              required={!formData.isMaxDecayedApex}
               inputProps={{ min: -1, max: 28 }}
+            />
+            
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={formData.isMaxDecayedApex}
+                  onChange={handleInputChange('isMaxDecayedApex')}
+                  disabled={isSubmitting}
+                />
+              }
+              label={
+                <Box>
+                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                    Max Decayed Apex Tier Account
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Check if this account has already decayed from Master+ to Diamond and should be immune
+                  </Typography>
+                </Box>
+              }
             />
             
             <Alert severity="info" sx={{ mt: 1 }}>
