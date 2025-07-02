@@ -58,11 +58,7 @@ const leagueAccountSchema = new mongoose.Schema({
   },
   lastSoloDuoGameId: {
     type: String,
-    default: null
-  },
-  lastSoloDuoGameDate: {
-    type: Date,
-    default: null
+    required: true
   },
   summonerLevel: {
     type: Number,

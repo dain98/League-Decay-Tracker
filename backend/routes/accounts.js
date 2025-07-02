@@ -3,7 +3,7 @@ import { body, param, validationResult } from 'express-validator';
 import { authenticateToken } from '../middleware/auth.js';
 import { authenticateApiKey } from '../middleware/apiKey.js';
 import { User, LeagueAccount } from '../database/index.js';
-import { getRiotAccountInfo, getSummonerInfo, getRiotRankInfo } from '../services/riotApi.js';
+import { getRiotAccountInfo, getSummonerInfo, getRiotRankInfo, getRankedSoloDuoMatchHistory, processAccountMatchHistory } from '../services/riotApi.js';
 
 const router = express.Router();
 
@@ -69,9 +69,19 @@ router.get('/:id', [
       });
     }
 
+    // Process match history and update decay if needed
+    let matchHistoryResult = null;
+    try {
+      matchHistoryResult = await processAccountMatchHistory(account);
+    } catch (matchError) {
+      console.warn('Could not process match history for account:', matchError.message);
+      // Continue without match history processing
+    }
+
     res.json({
       success: true,
-      data: account
+      data: account,
+      matchHistory: matchHistoryResult
     });
   } catch (error) {
     console.error('Error getting league account:', error);
@@ -150,6 +160,18 @@ router.post('/', [
       // Get rank info from Riot API
       const rankInfo = await getRiotRankInfo(riotAccountInfo.puuid, region);
 
+      // Get latest ranked solo/duo game ID
+      let latestGameId = null;
+      try {
+        const matchIds = await getRankedSoloDuoMatchHistory(riotAccountInfo.puuid, region, 1);
+        if (matchIds.length > 0) {
+          latestGameId = matchIds[0];
+        }
+      } catch (matchError) {
+        console.warn('Could not fetch latest game ID:', matchError.message);
+        // Continue without latest game ID - it will be set on first refresh
+      }
+
       // Create new league account
       const newAccount = new LeagueAccount({
         userId: user._id,
@@ -162,7 +184,8 @@ router.post('/', [
         tier: rankInfo.tier || null,
         division: rankInfo.division || null,
         lp: rankInfo.lp || 0,
-        remainingDecayDays: Number(remainingDecayDays)
+        remainingDecayDays: Number(remainingDecayDays),
+        lastSoloDuoGameId: latestGameId || 'NO_GAMES_YET'
       });
 
       await newAccount.save();
@@ -451,6 +474,80 @@ router.post('/decay/process', [
     res.status(500).json({
       success: false,
       error: 'Failed to process decay',
+      message: error.message
+    });
+  }
+});
+
+// Check match history and update decay days for all accounts
+router.post('/decay/check-matches', [
+  authenticateApiKey
+], async (req, res) => {
+  try {
+    // Find all active accounts
+    const allAccounts = await LeagueAccount.find({
+      isActive: true
+    });
+
+    if (allAccounts.length === 0) {
+      return res.json({
+        success: true,
+        message: 'No active accounts found to check',
+        data: {
+          processed: 0,
+          accounts: []
+        }
+      });
+    }
+
+    const processedAccounts = [];
+    const errors = [];
+
+    // Process each account
+    for (const account of allAccounts) {
+      try {
+        const result = await processAccountMatchHistory(account);
+        
+        if (result.updated) {
+          processedAccounts.push({
+            id: account._id,
+            riotId: account.riotId,
+            tier: account.tier,
+            division: account.division,
+            gamesPlayed: result.gamesPlayed,
+            previousDecayDays: result.previousDecayDays,
+            currentDecayDays: result.currentDecayDays,
+            decayDaysAdded: result.decayDaysAdded,
+            latestGameId: result.latestGameId
+          });
+        }
+
+      } catch (accountError) {
+        console.error(`   ❌ Error processing account ${account._id}:`, accountError.message);
+        errors.push({
+          accountId: account._id,
+          riotId: account.riotId,
+          error: accountError.message
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Match history check completed for ${processedAccounts.length} accounts`,
+      data: {
+        processed: processedAccounts.length,
+        totalFound: allAccounts.length,
+        accounts: processedAccounts,
+        errors: errors.length > 0 ? errors : undefined
+      }
+    });
+
+  } catch (error) {
+    console.error('Error checking match history:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to check match history',
       message: error.message
     });
   }

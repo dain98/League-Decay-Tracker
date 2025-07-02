@@ -227,6 +227,38 @@ export const getMatchHistory = async (puuid, region, count = 20) => {
   }
 };
 
+// Get ranked solo/duo match history by PUUID
+export const getRankedSoloDuoMatchHistory = async (puuid, region, count = 20) => {
+  try {
+    if (!RIOT_API_KEY) {
+      throw new Error('Riot API key not configured');
+    }
+
+    const regionalRouting = REGIONAL_ROUTING[region];
+    if (!regionalRouting) {
+      throw new Error(`Invalid region: ${region}`);
+    }
+
+    const baseURL = BASE_URLS[regionalRouting];
+    const client = createRiotApiClient(baseURL);
+
+    const response = await client.get(`/lol/match/v5/matches/by-puuid/${puuid}/ids`, {
+      params: {
+        count: count,
+        queue: 420, // Ranked Solo/Duo queue
+        type: 'ranked'
+      }
+    });
+
+    return response.data;
+  } catch (error) {
+    if (error.response?.status === 404) {
+      return [];
+    }
+    throw new Error(`Failed to get ranked solo/duo match history: ${error.message}`);
+  }
+};
+
 // Get match details by match ID
 export const getMatchDetails = async (matchId, region) => {
   try {
@@ -278,6 +310,103 @@ export const calculateDecayDays = async (puuid, region) => {
   } catch (error) {
     console.error('Error calculating decay days:', error);
     return 28; // Default to 28 days if calculation fails
+  }
+};
+
+// Process match history and update decay for a single account
+export const processAccountMatchHistory = async (account) => {
+  try {
+    console.log(`🔄 Processing match history for: ${account.gameName}#${account.tagLine} (${account.tier}${account.division || ''})`);
+
+    // Get ranked solo/duo match history
+    const matchIds = await getRankedSoloDuoMatchHistory(account.puuid, account.region, 20);
+
+    if (matchIds.length === 0) {
+      console.log(`   ⏭️  No ranked solo/duo matches found`);
+      return {
+        updated: false,
+        message: 'No ranked solo/duo matches found',
+        gamesPlayed: 0,
+        decayDaysAdded: 0
+      };
+    }
+
+    // Find the latest game ID
+    const latestGameId = matchIds[0];
+
+    // If we have a lastSoloDuoGameId, count games played after that
+    let gamesPlayed = 0;
+    if (account.lastSoloDuoGameId) {
+      // Find the index of the last known game
+      const lastGameIndex = matchIds.findIndex(id => id === account.lastSoloDuoGameId);
+      
+      if (lastGameIndex === -1) {
+        // Last known game not found in recent history, assume all games are new
+        gamesPlayed = matchIds.length;
+      } else {
+        // Count games played after the last known game
+        gamesPlayed = lastGameIndex;
+      }
+    } else {
+      // No previous game recorded, assume all games are new
+      gamesPlayed = matchIds.length;
+    }
+
+    console.log(`   📊 Found ${gamesPlayed} new games played`);
+
+    if (gamesPlayed > 0) {
+      // Calculate decay days to add based on tier
+      let decayDaysToAdd = 0;
+      let maxDecayDays = 28;
+
+      if (account.tier === 'DIAMOND') {
+        decayDaysToAdd = gamesPlayed * 7;
+        maxDecayDays = 28;
+      } else if (account.tier === 'MASTER' || account.tier === 'GRANDMASTER' || account.tier === 'CHALLENGER') {
+        decayDaysToAdd = gamesPlayed * 1;
+        maxDecayDays = 14;
+      }
+
+      if (decayDaysToAdd > 0) {
+        // Update decay days
+        const previousDecayDays = account.remainingDecayDays;
+        account.remainingDecayDays = Math.min(maxDecayDays, account.remainingDecayDays + decayDaysToAdd);
+        
+        // Update last game ID
+        account.lastSoloDuoGameId = latestGameId;
+
+        await account.save();
+
+        console.log(`   ✅ Decay days: ${previousDecayDays} → ${account.remainingDecayDays} (added ${decayDaysToAdd})`);
+
+        return {
+          updated: true,
+          gamesPlayed: gamesPlayed,
+          previousDecayDays: previousDecayDays,
+          currentDecayDays: account.remainingDecayDays,
+          decayDaysAdded: decayDaysToAdd,
+          latestGameId: latestGameId
+        };
+      }
+    }
+
+    // Update last game ID even if no decay changes
+    if (account.lastSoloDuoGameId !== latestGameId) {
+      account.lastSoloDuoGameId = latestGameId;
+      await account.save();
+      console.log(`   📝 Updated latest game ID to: ${latestGameId}`);
+    }
+
+    return {
+      updated: false,
+      gamesPlayed: gamesPlayed,
+      decayDaysAdded: 0,
+      latestGameId: latestGameId
+    };
+
+  } catch (error) {
+    console.error(`   ❌ Error processing account ${account._id}:`, error.message);
+    throw error;
   }
 };
 

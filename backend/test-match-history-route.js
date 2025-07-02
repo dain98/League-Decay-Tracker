@@ -5,10 +5,10 @@ dotenv.config();
 
 const API_BASE_URL = process.env.API_BASE_URL || 'https://loldecay-backend.up.railway.app';
 
-// Test the decay processing route
-async function testDecayRoute() {
+// Test the match history checking route
+async function testMatchHistoryRoute() {
   try {
-    console.log('🧪 Testing decay processing route...\n');
+    console.log('🧪 Testing match history checking route...\n');
 
     // Get the API key for authentication
     const apiKey = process.env.DECAY_API_KEY;
@@ -19,7 +19,7 @@ async function testDecayRoute() {
       return;
     }
 
-    const response = await axios.post(`${API_BASE_URL}/api/accounts/decay/process`, {}, {
+    const response = await axios.post(`${API_BASE_URL}/api/accounts/decay/check-matches`, {}, {
       headers: {
         'Content-Type': 'application/json',
         'X-API-Key': apiKey
@@ -32,7 +32,7 @@ async function testDecayRoute() {
     console.log(`📋 Response Data:`, JSON.stringify(data, null, 2));
 
     if (response.status === 200) {
-      console.log('\n✅ Decay processing route test completed successfully!');
+      console.log('\n✅ Match history checking route test completed successfully!');
       
       if (data.data) {
         console.log(`📈 Processed ${data.data.processed} accounts out of ${data.data.totalFound} found`);
@@ -41,7 +41,9 @@ async function testDecayRoute() {
           console.log('\n📝 Processed Accounts:');
           data.data.accounts.forEach((account, index) => {
             console.log(`  ${index + 1}. ${account.riotId} (${account.tier}${account.division || ''})`);
-            console.log(`     Decay days: ${account.previousDecayDays} → ${account.currentDecayDays}`);
+            console.log(`     Games played: ${account.gamesPlayed}`);
+            console.log(`     Decay days: ${account.previousDecayDays} → ${account.currentDecayDays} (+${account.decayDaysAdded})`);
+            console.log(`     Latest game ID: ${account.latestGameId}`);
           });
         }
         
@@ -53,14 +55,17 @@ async function testDecayRoute() {
         }
       }
     } else {
-      console.log('\n❌ Decay processing route test failed!');
+      console.log('\n❌ Match history checking route test failed!');
       console.log(`Error: ${data.error || 'Unknown error'}`);
     }
 
   } catch (error) {
     console.error('❌ Test failed with error:', error.message);
+    if (error.response) {
+      console.error('Response data:', error.response.data);
+    }
   }
 }
 
 // Test the route
-testDecayRoute(); 
+testMatchHistoryRoute(); 

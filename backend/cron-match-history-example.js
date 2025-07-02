@@ -3,19 +3,19 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = process.env.API_BASE_URL || 'https://loldecay-backend.up.railway.app';
 const API_KEY = process.env.DECAY_API_KEY;
 
-// Function to process decay
-async function processDecay() {
+// Function to check match history and update decay
+async function checkMatchHistory() {
   try {
-    console.log(`🕐 [${new Date().toISOString()}] Processing daily decay...`);
+    console.log(`🕐 [${new Date().toISOString()}] Checking match history for all accounts...`);
 
     if (!API_KEY) {
       throw new Error('DECAY_API_KEY environment variable not set');
     }
 
-    const response = await axios.post(`${API_BASE_URL}/api/accounts/decay/process`, {}, {
+    const response = await axios.post(`${API_BASE_URL}/api/accounts/decay/check-matches`, {}, {
       headers: {
         'Content-Type': 'application/json',
         'X-API-Key': API_KEY
@@ -25,49 +25,52 @@ async function processDecay() {
     const data = response.data;
 
     if (response.status === 200) {
-      console.log(`✅ Decay processing completed successfully!`);
+      console.log(`✅ Match history check completed successfully!`);
       console.log(`📊 Processed ${data.data.processed} accounts out of ${data.data.totalFound} found`);
       
       if (data.data.accounts && data.data.accounts.length > 0) {
-        console.log('\n📝 Processed Accounts:');
+        console.log('\n📝 Updated Accounts:');
         data.data.accounts.forEach((account, index) => {
           console.log(`  ${index + 1}. ${account.riotId} (${account.tier}${account.division || ''})`);
-          console.log(`     Decay days: ${account.previousDecayDays} → ${account.currentDecayDays}`);
+          console.log(`     Games played: ${account.gamesPlayed}`);
+          console.log(`     Decay days: ${account.previousDecayDays} → ${account.currentDecayDays} (+${account.decayDaysAdded})`);
         });
+      } else {
+        console.log('ℹ️  No accounts were updated (no new games found)');
       }
     } else {
       throw new Error(`API Error: ${data.error || 'Unknown error'}`);
     }
 
   } catch (error) {
-    console.error(`❌ Decay processing failed: ${error.message}`);
+    console.error(`❌ Match history check failed: ${error.message}`);
     // You might want to send an alert/notification here
   }
 }
 
 // Example usage:
 // 1. Run once manually
-// processDecay();
+// checkMatchHistory();
 
 // 2. For cron job setup, export the function
-export { processDecay };
+export { checkMatchHistory };
 
 // 3. Example cron job setup (uncomment and modify as needed):
 /*
 import cron from 'node-cron';
 
-// Run every day at 2:00 AM
-cron.schedule('0 2 * * *', () => {
-  processDecay();
+// Run every 30 minutes
+cron.schedule('*/30 * * * *', () => {
+  checkMatchHistory();
 }, {
   scheduled: true,
   timezone: "America/New_York"
 });
 
-console.log('🕐 Cron job scheduled for daily decay processing at 2:00 AM EST');
+console.log('🕐 Cron job scheduled for match history checking every 30 minutes');
 */
 
 // 4. For testing, you can run this directly
 if (process.argv.includes('--run')) {
-  processDecay();
+  checkMatchHistory();
 } 
