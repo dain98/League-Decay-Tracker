@@ -273,7 +273,7 @@ const Dashboard = () => {
       <AppBar position="fixed">
         <Toolbar>
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Ranked Decay Tracker
+            LoL Decay Tracker
           </Typography>
           
           <UserMenu 

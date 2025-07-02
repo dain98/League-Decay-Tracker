@@ -1,6 +1,7 @@
 import express from 'express';
 import { body, param, validationResult } from 'express-validator';
 import { authenticateToken } from '../middleware/auth.js';
+import { authenticateApiKey } from '../middleware/apiKey.js';
 import { User, LeagueAccount } from '../database/index.js';
 import { getRiotAccountInfo, getSummonerInfo, getRiotRankInfo } from '../services/riotApi.js';
 
@@ -376,6 +377,80 @@ router.post('/:id/refresh', [
     res.status(500).json({
       success: false,
       error: 'Failed to refresh league account',
+      message: error.message
+    });
+  }
+});
+
+// Process decay for all diamond+ accounts
+router.post('/decay/process', [
+  authenticateApiKey
+], async (req, res) => {
+  try {
+
+    // Find all accounts that are diamond and above
+    const diamondPlusAccounts = await LeagueAccount.find({
+      tier: { $in: ['DIAMOND', 'MASTER', 'GRANDMASTER', 'CHALLENGER'] },
+      isActive: true
+    });
+
+    if (diamondPlusAccounts.length === 0) {
+      return res.json({
+        success: true,
+        message: 'No diamond+ accounts found to process decay',
+        data: {
+          processed: 0,
+          accounts: []
+        }
+      });
+    }
+
+    const processedAccounts = [];
+    const errors = [];
+
+    // Process each account
+    for (const account of diamondPlusAccounts) {
+      try {
+        // Only process if account has remaining decay days
+        if (account.remainingDecayDays > 0) {
+          account.remainingDecayDays -= 1;
+          await account.save();
+          
+          processedAccounts.push({
+            id: account._id,
+            riotId: account.riotId,
+            tier: account.tier,
+            division: account.division,
+            previousDecayDays: account.remainingDecayDays + 1,
+            currentDecayDays: account.remainingDecayDays
+          });
+        }
+      } catch (accountError) {
+        console.error(`Error processing decay for account ${account._id}:`, accountError);
+        errors.push({
+          accountId: account._id,
+          riotId: account.riotId,
+          error: accountError.message
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Decay processed for ${processedAccounts.length} accounts`,
+      data: {
+        processed: processedAccounts.length,
+        totalFound: diamondPlusAccounts.length,
+        accounts: processedAccounts,
+        errors: errors.length > 0 ? errors : undefined
+      }
+    });
+
+  } catch (error) {
+    console.error('Error processing decay:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to process decay',
       message: error.message
     });
   }
