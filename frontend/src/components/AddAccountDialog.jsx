@@ -105,8 +105,8 @@ const AddAccountDialog = ({ open, onClose, onAdd, isLoading }) => {
         region: formData.region,
         riotId: `${formData.gameName.trim()}#${formData.tagLine.trim()}`,
         remainingDecayDays: formData.isMaxDecayedApex ? -1 : Number(formData.remainingDecayDays),
-        isSpecial: formData.isMaxDecayedApex,
-        isDecaying: formData.isMaxDecayedApex
+        isSpecial: Boolean(formData.isMaxDecayedApex),
+        isDecaying: Boolean(formData.isMaxDecayedApex)
       };
 
       await onAdd(accountData);
@@ -144,7 +144,7 @@ const AddAccountDialog = ({ open, onClose, onAdd, isLoading }) => {
   };
 
   const handleInputChange = (field) => (event) => {
-    const value = event.target.value;
+    const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -243,7 +243,7 @@ const AddAccountDialog = ({ open, onClose, onAdd, isLoading }) => {
                     Max Decayed Apex Tier Account
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    Check if this account has already decayed from Master+ to Diamond and should be immune
+                    Check this if you're Diamond II 75LP, and the client doesn't show a decay counter
                   </Typography>
                 </Box>
               }
