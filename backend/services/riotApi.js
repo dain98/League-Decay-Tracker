@@ -323,6 +323,9 @@ export const processAccountMatchHistory = async (account) => {
       const summonerInfo = await getSummonerInfo(account.puuid, account.region);
       const rankInfo = await getRiotRankInfo(account.puuid, account.region);
 
+      // Store previous tier for promotion detection
+      const previousTier = account.tier;
+      
       // Update account with fresh data
       account.summonerIcon = summonerInfo.profileIconId || account.summonerIcon;
       account.summonerLevel = summonerInfo.summonerLevel || account.summonerLevel;
@@ -346,9 +349,10 @@ export const processAccountMatchHistory = async (account) => {
       }
 
       // Check for Emerald promotion to Diamond: reset decay days to 28
-      if (account.tier === 'DIAMOND' && account.remainingDecayDays === -1) {
+      // Only if the account was previously Emerald (not if it was already Diamond and just got set to immune)
+      if (account.tier === 'DIAMOND' && previousTier === 'EMERALD' && account.remainingDecayDays === -1) {
         account.remainingDecayDays = 28; // Reset to 28 days for Diamond
-        console.log(`   🎯 ${account.riotId} promoted to Diamond - reset to 28 decay days`);
+        console.log(`   🎯 ${account.riotId} promoted from Emerald to Diamond - reset to 28 decay days`);
       }
     } catch (updateError) {
       console.warn(`   ⚠️  Could not update account details: ${updateError.message}`);
