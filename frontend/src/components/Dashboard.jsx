@@ -70,6 +70,7 @@ const UserMenuButton = styled(Box)(({ theme }) => ({
 const Dashboard = () => {
   const [accounts, setAccounts] = useState([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [accountToEdit, setAccountToEdit] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
@@ -126,6 +127,7 @@ const Dashboard = () => {
       // Add the new account to the list
       setAccounts(prevAccounts => [...prevAccounts, response.data]);
       setIsAddDialogOpen(false);
+      setAccountToEdit(null);
       
       setSnackbar({
         open: true,
@@ -135,6 +137,38 @@ const Dashboard = () => {
       
     } catch (error) {
       console.error('Error adding account:', error);
+      setSnackbar({
+        open: true,
+        message: handleAPIError(error),
+        severity: 'error'
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEditAccount = async (accountId, updatedAccount) => {
+    try {
+      setIsLoading(true);
+      const response = await accountsAPI.update(accountId, updatedAccount);
+      
+      // Update the account in the list
+      setAccounts(prevAccounts => 
+        prevAccounts.map(account => 
+          account._id === accountId ? response.data : account
+        )
+      );
+      setIsAddDialogOpen(false);
+      setAccountToEdit(null);
+      
+      setSnackbar({
+        open: true,
+        message: 'League account updated successfully!',
+        severity: 'success'
+      });
+      
+    } catch (error) {
+      console.error('Error updating account:', error);
       setSnackbar({
         open: true,
         message: handleAPIError(error),
@@ -210,6 +244,11 @@ const Dashboard = () => {
 
   const handleProfileClick = () => {
     setShowProfile(true);
+  };
+
+  const handleEditAccountClick = (account) => {
+    setAccountToEdit(account);
+    setIsAddDialogOpen(true);
   };
 
   const handleProfileClose = () => {
@@ -327,18 +366,24 @@ const Dashboard = () => {
         {accounts.length === 0 ? (
           <EmptyAccountsState onAddAccount={() => setIsAddDialogOpen(true)} />
         ) : (
-          <AccountList 
-            accounts={accounts} 
-            onDelete={handleDeleteAccount}
-            onRefresh={handleRefreshAccount}
-            isLoading={isLoading}
-          />
+                  <AccountList 
+          accounts={accounts} 
+          onDelete={handleDeleteAccount}
+          onRefresh={handleRefreshAccount}
+          onEdit={handleEditAccountClick}
+          isLoading={isLoading}
+        />
         )}
         
         <AddAccountDialog 
           open={isAddDialogOpen} 
-          onClose={() => setIsAddDialogOpen(false)}
+          onClose={() => {
+            setIsAddDialogOpen(false);
+            setAccountToEdit(null);
+          }}
           onAdd={handleAddAccount}
+          onEdit={handleEditAccount}
+          accountToEdit={accountToEdit}
           isLoading={isLoading}
         />
 

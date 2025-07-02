@@ -22,6 +22,7 @@ import {
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import EditIcon from '@mui/icons-material/Edit';
 import { styled } from '@mui/material/styles';
 import { getSummonerIconUrlSync } from '../services/ddragon.js';
 
@@ -53,7 +54,7 @@ const DecayChip = styled(Chip)(({ theme, severity }) => ({
   fontWeight: 'bold',
 }));
 
-const AccountList = ({ accounts, onDelete, onRefresh, isLoading }) => {
+const AccountList = ({ accounts, onDelete, onRefresh, onEdit, isLoading }) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [accountToDelete, setAccountToDelete] = React.useState(null);
   const [refreshCooldowns, setRefreshCooldowns] = React.useState({});
@@ -119,6 +120,10 @@ const AccountList = ({ accounts, onDelete, onRefresh, isLoading }) => {
   const handleDeleteClick = (accountId) => {
     setAccountToDelete(accountId);
     setDeleteDialogOpen(true);
+  };
+
+  const handleEditClick = (account) => {
+    onEdit(account);
   };
 
   const handleDeleteConfirm = () => {
@@ -268,25 +273,37 @@ const AccountList = ({ accounts, onDelete, onRefresh, isLoading }) => {
                   {formatDate(account.lastUpdated)}
                 </TableCell>
                 <TableCell>
-                  <Tooltip title={getRefreshTooltip(account._id)}>
-                    <span>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Tooltip title="Edit account">
                       <IconButton
-                        onClick={() => handleRefreshClick(account._id)}
-                        disabled={isLoading || isRefreshDisabled(account._id)}
+                        onClick={() => handleEditClick(account)}
+                        disabled={isLoading}
                         size="small"
                         color="primary"
                       >
-                        <RefreshIcon />
+                        <EditIcon />
                       </IconButton>
-                    </span>
-                  </Tooltip>
-                  <IconButton
-                    onClick={() => handleDeleteClick(account._id)}
-                    color="error"
-                    size="small"
-                  >
-                    <DeleteIcon />
-                  </IconButton>
+                    </Tooltip>
+                    <Tooltip title={getRefreshTooltip(account._id)}>
+                      <span>
+                        <IconButton
+                          onClick={() => handleRefreshClick(account._id)}
+                          disabled={isLoading || isRefreshDisabled(account._id)}
+                          size="small"
+                          color="primary"
+                        >
+                          <RefreshIcon />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    <IconButton
+                      onClick={() => handleDeleteClick(account._id)}
+                      color="error"
+                      size="small"
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </Box>
                 </TableCell>
               </StyledTableRow>
             );

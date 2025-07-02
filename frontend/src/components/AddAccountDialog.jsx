@@ -37,7 +37,7 @@ const regions = [
   // { value: 'VN2', label: 'Vietnam (VN2)' },
 ];
 
-const AddAccountDialog = ({ open, onClose, onAdd, isLoading }) => {
+const AddAccountDialog = ({ open, onClose, onAdd, onEdit, isLoading, accountToEdit }) => {
   const [formData, setFormData] = useState({
     gameName: '',
     tagLine: '',
@@ -45,6 +45,28 @@ const AddAccountDialog = ({ open, onClose, onAdd, isLoading }) => {
     remainingDecayDays: '',
     isMaxDecayedApex: false
   });
+
+  // Pre-fill form when editing an account
+  React.useEffect(() => {
+    if (accountToEdit && open) {
+      setFormData({
+        gameName: accountToEdit.gameName || '',
+        tagLine: accountToEdit.tagLine || '',
+        region: accountToEdit.region || 'NA1',
+        remainingDecayDays: accountToEdit.remainingDecayDays?.toString() || '',
+        isMaxDecayedApex: accountToEdit.isSpecial && accountToEdit.isDecaying && accountToEdit.remainingDecayDays === -1
+      });
+    } else if (!accountToEdit && open) {
+      // Reset form for new account
+      setFormData({
+        gameName: '',
+        tagLine: '',
+        region: 'NA1',
+        remainingDecayDays: '',
+        isMaxDecayedApex: false
+      });
+    }
+  }, [accountToEdit, open]);
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -109,7 +131,13 @@ const AddAccountDialog = ({ open, onClose, onAdd, isLoading }) => {
         isDecaying: Boolean(formData.isMaxDecayedApex)
       };
 
-      await onAdd(accountData);
+      if (accountToEdit) {
+        // Editing existing account
+        await onEdit(accountToEdit._id, accountData);
+      } else {
+        // Adding new account
+        await onAdd(accountData);
+      }
       
       // Reset form
       setFormData({
@@ -122,7 +150,7 @@ const AddAccountDialog = ({ open, onClose, onAdd, isLoading }) => {
       setErrors({});
       
     } catch (error) {
-      console.error('Error adding account:', error);
+      console.error('Error saving account:', error);
       // Error handling is done in the parent component
     } finally {
       setIsSubmitting(false);
@@ -169,10 +197,13 @@ const AddAccountDialog = ({ open, onClose, onAdd, isLoading }) => {
     >
       <DialogTitle>
         <Typography variant="h6" component="div">
-          Add League Account
+          {accountToEdit ? 'Edit League Account' : 'Add League Account'}
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Enter your League of Legends account details to start tracking decay
+          {accountToEdit 
+            ? 'Update your League of Legends account details'
+            : 'Enter your League of Legends account details to start tracking decay'
+          }
         </Typography>
       </DialogTitle>
       
@@ -271,7 +302,10 @@ const AddAccountDialog = ({ open, onClose, onAdd, isLoading }) => {
             disabled={isSubmitting || isLoading}
             startIcon={isSubmitting ? <CircularProgress size={16} /> : null}
         >
-            {isSubmitting ? 'Adding Account...' : 'Add Account'}
+            {isSubmitting 
+              ? (accountToEdit ? 'Updating Account...' : 'Adding Account...') 
+              : (accountToEdit ? 'Update Account' : 'Add Account')
+            }
         </Button>
       </DialogActions>
       </form>
