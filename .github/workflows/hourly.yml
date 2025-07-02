@@ -1,0 +1,48 @@
+name: Run Decay Per Region at Local Midnight
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # Every hour UTC
+  workflow_dispatch:
+
+jobs:
+  maybe-run-decay:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get local hours in each region
+        id: get-times
+        run: |
+          NA_HOUR=$(TZ="America/Los_Angeles" date +'%H')
+          EUW_HOUR=$(TZ="Europe/London" date +'%H')
+          KR_HOUR=$(TZ="Asia/Seoul" date +'%H')
+          
+          echo "NA_HOUR=$NA_HOUR" >> "$GITHUB_OUTPUT"
+          echo "EUW_HOUR=$EUW_HOUR" >> "$GITHUB_OUTPUT"
+          echo "KR_HOUR=$KR_HOUR" >> "$GITHUB_OUTPUT"
+
+      - name: Trigger Decay for NA1
+        if: steps.get-times.outputs.NA_HOUR == '00'
+        run: |
+          echo "Triggering decay for NA1 (12AM PT)"
+          curl -X POST https://loldecay-backend.up.railway.app/api/accounts/decay/process \
+            -H "Content-Type: application/json" \
+            -H "X-API-Key: ${{ secrets.X_API_KEY }}" \
+            -d '{"region": "NA1"}'
+
+      - name: Trigger Decay for EUW1
+        if: steps.get-times.outputs.EUW_HOUR == '00'
+        run: |
+          echo "Triggering decay for EUW1 (12AM London)"
+          curl -X POST https://loldecay-backend.up.railway.app/api/accounts/decay/process \
+            -H "Content-Type: application/json" \
+            -H "X-API-Key: ${{ secrets.X_API_KEY }}" \
+            -d '{"region": "EUW1"}'
+
+      - name: Trigger Decay for KR
+        if: steps.get-times.outputs.KR_HOUR == '00'
+        run: |
+          echo "Triggering decay for KR (12AM Korea)"
+          curl -X POST https://loldecay-backend.up.railway.app/api/accounts/decay/process \
+            -H "Content-Type: application/json" \
+            -H "X-API-Key: ${{ secrets.X_API_KEY }}" \
+            -d '{"region": "KR"}'

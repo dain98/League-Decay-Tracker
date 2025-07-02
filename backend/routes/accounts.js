@@ -410,20 +410,34 @@ router.post('/decay/process', [
   authenticateApiKey
 ], async (req, res) => {
   try {
+    const { region } = req.body;
 
-    // Find all accounts that are diamond and above
-    const diamondPlusAccounts = await LeagueAccount.find({
+    // Build query for diamond+ accounts
+    const query = {
       tier: { $in: ['DIAMOND', 'MASTER', 'GRANDMASTER', 'CHALLENGER'] },
       isActive: true
-    });
+    };
+
+    // Add region filter if provided
+    if (region) {
+      query.region = region;
+      console.log(`🌍 Processing decay for region: ${region}`);
+    } else {
+      console.log('🌍 Processing decay for all regions');
+    }
+
+    // Find all accounts that are diamond and above
+    const diamondPlusAccounts = await LeagueAccount.find(query);
 
     if (diamondPlusAccounts.length === 0) {
+      const regionMessage = region ? ` for region ${region}` : '';
       return res.json({
         success: true,
-        message: 'No diamond+ accounts found to process decay',
+        message: `No diamond+ accounts found to process decay${regionMessage}`,
         data: {
           processed: 0,
-          accounts: []
+          accounts: [],
+          region: region || 'all'
         }
       });
     }
@@ -434,9 +448,22 @@ router.post('/decay/process', [
     // Process each account
     for (const account of diamondPlusAccounts) {
       try {
-        // Only process if account has remaining decay days
+        // Skip accounts that are immune (decay days = -1)
+        if (account.remainingDecayDays === -1) {
+          console.log(`🛡️  ${account.riotId} is immune to decay (decay days: -1) - skipping`);
+          continue;
+        }
+        
         if (account.remainingDecayDays > 0) {
+          // Account still has decay days - reduce by 1
           account.remainingDecayDays -= 1;
+          
+          // Set isDecaying flag if account reaches 0 decay days
+          if (account.remainingDecayDays === 0) {
+            account.isDecaying = true;
+            console.log(`🔄 ${account.riotId} has 0 decay days left - setting isDecaying flag`);
+          }
+          
           await account.save();
           
           processedAccounts.push({
@@ -445,8 +472,55 @@ router.post('/decay/process', [
             tier: account.tier,
             division: account.division,
             previousDecayDays: account.remainingDecayDays + 1,
-            currentDecayDays: account.remainingDecayDays
+            currentDecayDays: account.remainingDecayDays,
+            isDecaying: account.isDecaying
           });
+        } else if (account.remainingDecayDays === 0 && !account.isDecaying) {
+          // Account has 0 decay days but flag not set - set it now
+          account.isDecaying = true;
+          await account.save();
+          
+          console.log(`🔄 ${account.riotId} already has 0 decay days - setting isDecaying flag`);
+          
+          processedAccounts.push({
+            id: account._id,
+            riotId: account.riotId,
+            tier: account.tier,
+            division: account.division,
+            previousDecayDays: 0,
+            currentDecayDays: 0,
+            isDecaying: true,
+            alreadyDecaying: true
+          });
+        } else if (account.remainingDecayDays === 0 && account.isDecaying) {
+          // Account has 0 decay days and isDecaying flag is set
+          // Check if Master+ account with LP < 75 should reset to 28 days
+          if ((account.tier === 'MASTER' || account.tier === 'GRANDMASTER' || account.tier === 'CHALLENGER') && 
+              account.lp < 75) {
+            
+            const previousDecayDays = account.remainingDecayDays;
+            account.remainingDecayDays = 28;
+            account.isDecaying = false;
+            account.isSpecial = true; // Set special flag for this decay case
+            
+            await account.save();
+            
+            console.log(`🔄 ${account.riotId} (${account.tier} ${account.lp}LP) decayed back to Diamond - reset to 28 days, set isSpecial flag`);
+            
+            processedAccounts.push({
+              id: account._id,
+              riotId: account.riotId,
+              tier: account.tier,
+              division: account.division,
+              previousDecayDays: previousDecayDays,
+              currentDecayDays: 28,
+              isDecaying: false,
+              isSpecial: true,
+              decayReset: true,
+              reason: 'Master+ account decayed back to Diamond'
+            });
+          }
+          // If not Master+ or LP >= 75, skip processing (already decaying)
         }
       } catch (accountError) {
         console.error(`Error processing decay for account ${account._id}:`, accountError);
@@ -458,12 +532,14 @@ router.post('/decay/process', [
       }
     }
 
+    const regionMessage = region ? ` for region ${region}` : '';
     res.json({
       success: true,
-      message: `Decay processed for ${processedAccounts.length} accounts`,
+      message: `Decay processed for ${processedAccounts.length} accounts${regionMessage}`,
       data: {
         processed: processedAccounts.length,
         totalFound: diamondPlusAccounts.length,
+        region: region || 'all',
         accounts: processedAccounts,
         errors: errors.length > 0 ? errors : undefined
       }

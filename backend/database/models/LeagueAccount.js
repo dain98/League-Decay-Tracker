@@ -37,7 +37,7 @@ const leagueAccountSchema = new mongoose.Schema({
   remainingDecayDays: {
     type: Number,
     default: 28,
-    min: 0,
+    min: -1,
     max: 28,
     index: true
   },
@@ -68,6 +68,16 @@ const leagueAccountSchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true
+  },
+  isDecaying: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
+  isSpecial: {
+    type: Boolean,
+    default: false,
+    index: true
   },
   lastUpdated: {
     type: Date,

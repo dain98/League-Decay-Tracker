@@ -318,16 +318,59 @@ export const processAccountMatchHistory = async (account) => {
   try {
     console.log(`🔄 Processing match history for: ${account.gameName}#${account.tagLine} (${account.tier}${account.division || ''})`);
 
+    // First, update account details from Riot API
+    try {
+      const summonerInfo = await getSummonerInfo(account.puuid, account.region);
+      const rankInfo = await getRiotRankInfo(account.puuid, account.region);
+
+      // Update account with fresh data
+      account.summonerIcon = summonerInfo.profileIconId || account.summonerIcon;
+      account.summonerLevel = summonerInfo.summonerLevel || account.summonerLevel;
+      account.tier = rankInfo.tier || account.tier;
+      account.division = rankInfo.division || account.division;
+      account.lp = rankInfo.lp || account.lp;
+      account.lastUpdated = new Date();
+
+      console.log(`   📊 Updated rank: ${account.tier}${account.division || ''} ${account.lp}LP`);
+
+      // Check for special immunity case: D2 75LP with isSpecial flag
+      if (account.isSpecial && account.tier === 'DIAMOND' && account.division === 'II' && account.lp === 75) {
+        account.remainingDecayDays = -1; // Set immunity
+        console.log(`   🛡️  ${account.riotId} reached D2 75LP with isSpecial flag - setting immunity (decay days: -1)`);
+      }
+
+      // Check for Diamond decay to Emerald: set decay days to -1 (no decay for Emerald)
+      if (account.tier === 'EMERALD') {
+        account.remainingDecayDays = -1; // Set immunity for Emerald
+        console.log(`   🛡️  ${account.riotId} is now Emerald - setting immunity (decay days: -1)`);
+      }
+
+      // Check for Emerald promotion to Diamond: reset decay days to 28
+      if (account.tier === 'DIAMOND' && account.remainingDecayDays === -1) {
+        account.remainingDecayDays = 28; // Reset to 28 days for Diamond
+        console.log(`   🎯 ${account.riotId} promoted to Diamond - reset to 28 decay days`);
+      }
+    } catch (updateError) {
+      console.warn(`   ⚠️  Could not update account details: ${updateError.message}`);
+      // Continue with match history processing even if rank update fails
+    }
+
     // Get ranked solo/duo match history
     const matchIds = await getRankedSoloDuoMatchHistory(account.puuid, account.region, 20);
 
     if (matchIds.length === 0) {
       console.log(`   ⏭️  No ranked solo/duo matches found`);
+      
+      // Save account to persist rank updates even if no matches found
+      await account.save();
+      
       return {
         updated: false,
         message: 'No ranked solo/duo matches found',
         gamesPlayed: 0,
-        decayDaysAdded: 0
+        decayDaysAdded: 0,
+        isSpecial: account.isSpecial,
+        rankUpdated: true
       };
     }
 
@@ -367,41 +410,78 @@ export const processAccountMatchHistory = async (account) => {
         maxDecayDays = 14;
       }
 
-      if (decayDaysToAdd > 0) {
-        // Update decay days
-        const previousDecayDays = account.remainingDecayDays;
-        account.remainingDecayDays = Math.min(maxDecayDays, account.remainingDecayDays + decayDaysToAdd);
-        
-        // Update last game ID
-        account.lastSoloDuoGameId = latestGameId;
+              if (decayDaysToAdd > 0) {
+          // Update decay days
+          const previousDecayDays = account.remainingDecayDays;
+          
+          // Handle special immunity case: if account was immune (-1) and now plays games
+          if (previousDecayDays === -1) {
+            account.remainingDecayDays = 28; // Reset to 28 days
+            account.isSpecial = false; // Clear special flag
+            account.isDecaying = false;
+            console.log(`   🎮 ${account.riotId} was immune but played games - reset to 28 days, cleared isSpecial flag`);
+          } else {
+            account.remainingDecayDays = Math.min(maxDecayDays, account.remainingDecayDays + decayDaysToAdd);
+          }
+          
+          // Reset isDecaying flag since games were played
+          account.isDecaying = false;
+          
+          // Update last game ID
+          account.lastSoloDuoGameId = latestGameId;
 
-        await account.save();
+          await account.save();
 
-        console.log(`   ✅ Decay days: ${previousDecayDays} → ${account.remainingDecayDays} (added ${decayDaysToAdd})`);
+          console.log(`   ✅ Decay days: ${previousDecayDays} → ${account.remainingDecayDays} (added ${decayDaysToAdd})`);
+          console.log(`   ✅ Reset isDecaying flag to false`);
 
-        return {
-          updated: true,
-          gamesPlayed: gamesPlayed,
-          previousDecayDays: previousDecayDays,
-          currentDecayDays: account.remainingDecayDays,
-          decayDaysAdded: decayDaysToAdd,
-          latestGameId: latestGameId
-        };
-      }
+          return {
+            updated: true,
+            gamesPlayed: gamesPlayed,
+            previousDecayDays: previousDecayDays,
+            currentDecayDays: account.remainingDecayDays,
+            decayDaysAdded: decayDaysToAdd,
+            latestGameId: latestGameId,
+            isDecaying: false,
+            isSpecial: account.isSpecial,
+            rankUpdated: true
+          };
+        }
     }
 
     // Update last game ID even if no decay changes
     if (account.lastSoloDuoGameId !== latestGameId) {
       account.lastSoloDuoGameId = latestGameId;
+      
+      // Reset isDecaying flag if games were played (even if no decay days added)
+      if (gamesPlayed > 0) {
+        account.isDecaying = false;
+        
+        // Handle special immunity case: if account was immune (-1) and now plays games
+        if (account.remainingDecayDays === -1) {
+          account.remainingDecayDays = 28; // Reset to 28 days
+          account.isSpecial = false; // Clear special flag
+          console.log(`   🎮 ${account.riotId} was immune but played games - reset to 28 days, cleared isSpecial flag`);
+        }
+        
+        console.log(`   ✅ Reset isDecaying flag to false (games played but no decay days added)`);
+      }
+      
       await account.save();
       console.log(`   📝 Updated latest game ID to: ${latestGameId}`);
+    } else {
+      // Even if no match history changes, save the account to persist rank updates
+      await account.save();
     }
 
     return {
       updated: false,
       gamesPlayed: gamesPlayed,
       decayDaysAdded: 0,
-      latestGameId: latestGameId
+      latestGameId: latestGameId,
+      isDecaying: account.isDecaying,
+      isSpecial: account.isSpecial,
+      rankUpdated: true
     };
 
   } catch (error) {
