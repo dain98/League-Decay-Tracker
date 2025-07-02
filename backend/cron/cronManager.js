@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:3001';
+const API_BASE_URL = process.env.RAILWAY_PUBLIC_DOMAIN || 'http://localhost:3001';
 const API_KEY = process.env.API_KEY;
 
 class CronManager {
@@ -123,7 +123,7 @@ class CronManager {
         try {
             console.log('Processing match history for all accounts...');
             
-            const response = await axios.post(`${API_BASE_URL}/api/match-history/check`, {}, {
+                            const response = await axios.post(`${API_BASE_URL}/api/accounts/decay/check-matches`, {}, {
                 headers: {
                     'Authorization': `Bearer ${API_KEY}`,
                     'Content-Type': 'application/json'

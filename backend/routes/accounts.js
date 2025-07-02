@@ -190,9 +190,19 @@ router.post('/', [
 
       await newAccount.save();
 
+      // Process match history for the new account to ensure accurate decay tracking
+      let matchHistoryResult = null;
+      try {
+        matchHistoryResult = await processAccountMatchHistory(newAccount);
+      } catch (matchError) {
+        console.warn('Could not process match history for new account:', matchError.message);
+        // Continue without match history processing
+      }
+
       res.status(201).json({
         success: true,
         data: newAccount,
+        matchHistory: matchHistoryResult,
         message: 'League account added successfully'
       });
 
@@ -364,26 +374,15 @@ router.post('/:id/refresh', [
       });
     }
 
-    // Refresh data from Riot API
+    // Refresh data from Riot API and process match history
     try {
-      const riotAccountInfo = await getRiotAccountInfo(account.gameName, account.tagLine, account.region);
-      const summonerInfo = await getSummonerInfo(account.puuid, account.region);
-      const rankInfo = await getRiotRankInfo(account.puuid, account.region);
-
-      // Update account with fresh data
-      account.summonerIcon = summonerInfo.profileIconId || account.summonerIcon;
-      account.summonerLevel = summonerInfo.summonerLevel || account.summonerLevel;
-      account.tier = rankInfo.tier || account.tier;
-      account.division = rankInfo.division || account.division;
-      account.lp = rankInfo.lp || account.lp;
-      account.lastUpdated = new Date();
-
-      await account.save();
-
+      const result = await processAccountMatchHistory(account);
+      
       res.json({
         success: true,
         data: account,
-        message: 'Account data refreshed successfully'
+        matchHistory: result,
+        message: result.updated ? 'Account data refreshed and match history processed' : 'Account data refreshed successfully'
       });
 
     } catch (riotError) {
