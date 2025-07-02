@@ -96,7 +96,7 @@ class CronManager {
         try {
             console.log(`Processing decay for region: ${region}`);
             
-            const response = await axios.post(`${API_BASE_URL}/api/decay/process`, {
+            const response = await axios.post(`${API_BASE_URL}/api/accounts/decay/process`, {
                 region: region
             }, {
                 headers: {
