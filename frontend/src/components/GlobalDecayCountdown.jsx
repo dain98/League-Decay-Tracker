@@ -10,17 +10,51 @@ const CountdownContainer = styled(Paper)(({ theme, urgency }) => ({
     ? 'rgba(211, 47, 47, 0.15)' 
     : urgency === 'medium' 
       ? 'rgba(237, 108, 2, 0.15)' 
-      : 'rgba(46, 125, 50, 0.15)',
+      : urgency === 'immune'
+        ? 'rgba(76, 175, 80, 0.15)'
+        : 'rgba(46, 125, 50, 0.15)',
   borderLeft: `6px solid ${
     urgency === 'high' 
       ? theme.palette.error.main 
       : urgency === 'medium' 
         ? theme.palette.warning.main 
-        : theme.palette.success.main
+        : urgency === 'immune'
+          ? theme.palette.success.main
+          : theme.palette.success.main
   }`,
 }));
 
 const GlobalDecayCountdown = ({ daysRemaining, accountName }) => {
+  // Handle immune accounts (decay days = -1)
+  if (daysRemaining === -1) {
+    return (
+      <CountdownContainer elevation={3} urgency="immune">
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h5" component="h2" color="success.main">
+            🛡️ Decay Immune Account
+          </Typography>
+        </Box>
+        
+        <Typography variant="body1" gutterBottom>
+          {accountName} is <strong>immune to decay</strong> and cannot lose LP due to inactivity.
+        </Typography>
+        
+        <Box sx={{ mt: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+            <Typography variant="caption">Decay Immune</Typography>
+            <Typography variant="caption">∞</Typography>
+          </Box>
+          <LinearProgress 
+            variant="determinate" 
+            value={100} 
+            color="success"
+            sx={{ height: 10, borderRadius: 5 }}
+          />
+        </Box>
+      </CountdownContainer>
+    );
+  }
+
   let urgency = 'low';
   if (daysRemaining <= 3) urgency = 'high';
   else if (daysRemaining <= 7) urgency = 'medium';

@@ -40,10 +40,12 @@ const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
 }));
 
 const DecayChip = styled(Chip)(({ theme, severity }) => ({
-  backgroundColor: severity === 'critical' ? theme.palette.error.main : 
+  backgroundColor: severity === 'immune' ? theme.palette.success.main :
+                   severity === 'critical' ? theme.palette.error.main : 
                    severity === 'warning' ? theme.palette.warning.main : 
                    severity === 'info' ? theme.palette.info.main : theme.palette.success.main,
   color: theme.palette.getContrastText(
+    severity === 'immune' ? theme.palette.success.main :
     severity === 'critical' ? theme.palette.error.main : 
     severity === 'warning' ? theme.palette.warning.main : 
     severity === 'info' ? theme.palette.info.main : theme.palette.success.main
@@ -169,6 +171,7 @@ const AccountList = ({ accounts, onDelete, onRefresh, isLoading }) => {
   };
 
   const getDecaySeverity = (daysRemaining) => {
+    if (daysRemaining === -1) return 'immune';
     if (daysRemaining <= 3) return 'critical';
     if (daysRemaining <= 7) return 'warning';
     if (daysRemaining <= 14) return 'info';
@@ -176,6 +179,7 @@ const AccountList = ({ accounts, onDelete, onRefresh, isLoading }) => {
   };
 
   const getDecayLabel = (daysRemaining) => {
+    if (daysRemaining === -1) return '∞ IMMUNE';
     if (daysRemaining <= 0) return 'DECAYED';
     if (daysRemaining === 1) return '1 DAY';
     return `${daysRemaining} DAYS`;

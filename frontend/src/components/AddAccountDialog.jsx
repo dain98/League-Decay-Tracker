@@ -72,8 +72,8 @@ const AddAccountDialog = ({ open, onClose, onAdd, isLoading }) => {
     
     // Remaining Decay Days validation
     const decay = Number(formData.remainingDecayDays);
-    if (isNaN(decay) || decay < 0 || decay > 28) {
-      newErrors.remainingDecayDays = 'Enter a number between 0 and 28';
+    if (isNaN(decay) || decay < -1 || decay > 28) {
+      newErrors.remainingDecayDays = 'Enter a number between -1 (immune) and 28';
     }
     
     setErrors(newErrors);
@@ -210,11 +210,11 @@ const AddAccountDialog = ({ open, onClose, onAdd, isLoading }) => {
               value={formData.remainingDecayDays}
               onChange={handleInputChange('remainingDecayDays')}
               error={!!errors.remainingDecayDays}
-              helperText={errors.remainingDecayDays || 'Enter a number between 0 and 28'}
+              helperText={errors.remainingDecayDays || 'Enter a number between -1 (immune) and 28'}
               disabled={isSubmitting}
               fullWidth
               required
-              inputProps={{ min: 0, max: 28 }}
+              inputProps={{ min: -1, max: 28 }}
             />
             
             <Alert severity="info" sx={{ mt: 1 }}>
