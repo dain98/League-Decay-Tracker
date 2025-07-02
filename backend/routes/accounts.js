@@ -245,7 +245,10 @@ router.put('/:id', [
   param('id').isMongoId().withMessage('Invalid account ID'),
   body('isActive').optional().isBoolean(),
   body('gameName').optional().isString().trim().isLength({ min: 1, max: 50 }),
-  body('tagLine').optional().isString().trim().isLength({ min: 1, max: 10 })
+  body('tagLine').optional().isString().trim().isLength({ min: 1, max: 10 }),
+  body('remainingDecayDays').optional().isInt({ min: -1, max: 28 }).withMessage('Remaining decay days must be between -1 (immune) and 28'),
+  body('isSpecial').optional().isBoolean().withMessage('isSpecial must be a boolean'),
+  body('isDecaying').optional().isBoolean().withMessage('isDecaying must be a boolean')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -278,10 +281,13 @@ router.put('/:id', [
     }
 
     // Update allowed fields
-    const { isActive, gameName, tagLine } = req.body;
+    const { isActive, gameName, tagLine, remainingDecayDays, isSpecial, isDecaying } = req.body;
     if (typeof isActive === 'boolean') account.isActive = isActive;
     if (gameName) account.gameName = gameName;
     if (tagLine) account.tagLine = tagLine;
+    if (typeof remainingDecayDays === 'number') account.remainingDecayDays = remainingDecayDays;
+    if (typeof isSpecial === 'boolean') account.isSpecial = isSpecial;
+    if (typeof isDecaying === 'boolean') account.isDecaying = isDecaying;
 
     await account.save();
 
