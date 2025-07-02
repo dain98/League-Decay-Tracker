@@ -13,44 +13,18 @@ const BASE_URLS = {
   SEA: 'https://sea.api.riotgames.com'
 };
 
-// Regional routing values
+// Regional routing values (only supported regions)
 const REGIONAL_ROUTING = {
   NA1: 'AMERICAS',
-  LA1: 'AMERICAS',
-  LA2: 'AMERICAS',
-  BR1: 'AMERICAS',
-  KR: 'ASIA',
-  JP1: 'ASIA',
-  EUN1: 'EUROPE',
   EUW1: 'EUROPE',
-  TR1: 'EUROPE',
-  RU: 'EUROPE',
-  OC1: 'SEA',
-  PH2: 'SEA',
-  SG2: 'SEA',
-  TH2: 'SEA',
-  VN2: 'SEA',
-  TW2: 'SEA'
+  KR: 'ASIA'
 };
 
-// Platform routing values
+// Platform routing values (only supported regions)
 const PLATFORM_ROUTING = {
   NA1: 'na1',
-  LA1: 'la1',
-  LA2: 'la2',
-  BR1: 'br1',
-  KR: 'kr',
-  JP1: 'jp1',
-  EUN1: 'eun1',
   EUW1: 'euw1',
-  TR1: 'tr1',
-  RU: 'ru',
-  OC1: 'oc1',
-  PH2: 'ph2',
-  SG2: 'sg2',
-  TH2: 'th2',
-  VN2: 'vn2',
-  TW2: 'tw2'
+  KR: 'kr'
 };
 
 // Create axios instance with default config
@@ -316,6 +290,19 @@ export const calculateDecayDays = async (puuid, region) => {
 // Process match history and update decay for a single account
 export const processAccountMatchHistory = async (account) => {
   try {
+    // Check if region is supported
+    if (!REGIONAL_ROUTING[account.region]) {
+      console.log(`⏭️  Skipping ${account.gameName}#${account.tagLine} - unsupported region: ${account.region}`);
+      return {
+        updated: false,
+        message: `Unsupported region: ${account.region}`,
+        gamesPlayed: 0,
+        decayDaysAdded: 0,
+        isSpecial: account.isSpecial,
+        rankUpdated: false
+      };
+    }
+
     console.log(`🔄 Processing match history for: ${account.gameName}#${account.tagLine} (${account.tier}${account.division || ''})`);
 
     // First, update account details from Riot API

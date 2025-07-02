@@ -4,8 +4,10 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const API_BASE_URL = process.env.RAILWAY_PUBLIC_DOMAIN || 'http://localhost:3001';
-const API_KEY = process.env.API_KEY;
+const API_BASE_URL = process.env.RAILWAY_PUBLIC_DOMAIN 
+  ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` 
+  : 'http://localhost:3001';
+const API_KEY = process.env.DECAY_API_KEY;
 
 class CronManager {
     constructor() {
@@ -122,8 +124,9 @@ class CronManager {
     async processMatchHistory() {
         try {
             console.log('Processing match history for all accounts...');
+            console.log(`Using API URL: ${API_BASE_URL}`);
             
-                            const response = await axios.post(`${API_BASE_URL}/api/accounts/decay/check-matches`, {}, {
+            const response = await axios.post(`${API_BASE_URL}/api/accounts/decay/check-matches`, {}, {
                 headers: {
                     'Authorization': `Bearer ${API_KEY}`,
                     'Content-Type': 'application/json'
@@ -133,6 +136,9 @@ class CronManager {
             console.log('Match history processing completed:', response.data.message);
         } catch (error) {
             console.error('Error processing match history:', error.response?.data?.message || error.message);
+            if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+                console.error(`Network error - check if API_BASE_URL is correct: ${API_BASE_URL}`);
+            }
         }
     }
 
