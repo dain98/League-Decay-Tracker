@@ -12,6 +12,9 @@ import userRoutes from './routes/users.js';
 import accountRoutes from './routes/accounts.js';
 import healthRoutes from './routes/health.js';
 
+// Import cron manager
+import CronManager from './cron/cronManager.js';
+
 // Load environment variables
 dotenv.config();
 
@@ -90,6 +93,35 @@ app.use('/api/health', healthRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/accounts', accountRoutes);
 
+// Manual cron trigger endpoints (for testing)
+app.post('/api/cron/trigger-decay', async (req, res) => {
+  try {
+    if (!app.locals.cronManager) {
+      return res.status(503).json({ error: 'Cron manager not available' });
+    }
+    
+    await app.locals.cronManager.triggerDecay();
+    res.json({ message: 'Decay processing triggered successfully' });
+  } catch (error) {
+    console.error('Error triggering decay:', error);
+    res.status(500).json({ error: 'Failed to trigger decay processing' });
+  }
+});
+
+app.post('/api/cron/trigger-match-history', async (req, res) => {
+  try {
+    if (!app.locals.cronManager) {
+      return res.status(503).json({ error: 'Cron manager not available' });
+    }
+    
+    await app.locals.cronManager.triggerMatchHistory();
+    res.json({ message: 'Match history check triggered successfully' });
+  } catch (error) {
+    console.error('Error triggering match history:', error);
+    res.status(500).json({ error: 'Failed to trigger match history check' });
+  }
+});
+
 // 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({
@@ -141,6 +173,19 @@ const startServer = async () => {
       console.log(`🔗 API URL: http://localhost:${PORT}`);
       console.log(`🏥 Health check: http://localhost:${PORT}/api/health`);
     });
+
+    // Start cron jobs (only in production or when explicitly enabled)
+    if (process.env.NODE_ENV === 'production' || process.env.ENABLE_CRON === 'true') {
+      const cronManager = new CronManager();
+      cronManager.start();
+      
+      // Store cron manager instance for potential manual triggers
+      app.locals.cronManager = cronManager;
+      
+      console.log('⏰ Cron jobs started');
+    } else {
+      console.log('⏰ Cron jobs disabled (set ENABLE_CRON=true to enable)');
+    }
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);
