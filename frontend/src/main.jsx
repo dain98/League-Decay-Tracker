@@ -1,23 +1,16 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { Auth0Provider } from '@auth0/auth0-react'
 import App from './App.jsx'
 import './index.css'
-import { auth0Config } from './config/auth0.js'
+import { FirebaseAuthProvider } from './context/FirebaseAuthContext.jsx'
 import { UserProfileProvider } from './context/UserProfileContext.jsx'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <Auth0Provider
-      domain={auth0Config.domain}
-      clientId={auth0Config.clientId}
-      authorizationParams={auth0Config.authorizationParams}
-      cacheLocation={auth0Config.cacheLocation}
-      useRefreshTokens={auth0Config.useRefreshTokens}
-    >
+    <FirebaseAuthProvider>
       <UserProfileProvider>
         <App />
       </UserProfileProvider>
-    </Auth0Provider>
+    </FirebaseAuthProvider>
   </React.StrictMode>,
 )

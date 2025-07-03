@@ -1,7 +1,17 @@
-import React from 'react';
-import { Box, Button, Typography, Paper } from '@mui/material';
+import React, { useState } from 'react';
+import { 
+  Box, 
+  Button, 
+  Typography, 
+  Paper, 
+  TextField,
+  Divider,
+  Alert,
+  CircularProgress
+} from '@mui/material';
 import { styled } from '@mui/material/styles';
-import { useAuth0 } from '@auth0/auth0-react';
+import { useFirebaseAuth } from '../context/FirebaseAuthContext';
+import GoogleIcon from '@mui/icons-material/Google';
 
 // Styled components
 const PageContainer = styled(Box)({
@@ -29,21 +39,69 @@ const LoginContainer = styled(Paper)(({ theme }) => ({
   borderRadius: theme.spacing(2),
 }));
 
-const Auth0Button = styled(Button)(({ theme }) => ({
-  marginTop: theme.spacing(3),
-  backgroundColor: '#d13639',
+const AuthButton = styled(Button)(({ theme }) => ({
+  marginTop: theme.spacing(2),
   padding: theme.spacing(1.5, 4),
   '&:hover': {
     backgroundColor: '#b13035',
   },
 }));
 
-const Login = () => {
-  const { loginWithRedirect, isAuthenticated, isLoading } = useAuth0();
+const GoogleButton = styled(Button)(({ theme }) => ({
+  marginTop: theme.spacing(2),
+  backgroundColor: '#4285f4',
+  color: 'white',
+  padding: theme.spacing(1.5, 4),
+  '&:hover': {
+    backgroundColor: '#357abd',
+  },
+}));
 
-  const handleAuth0Login = () => {
-    // Simply redirect to Auth0 login - token will be handled after redirect
-    loginWithRedirect();
+const Login = () => {
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const { 
+    signIn, 
+    signUp, 
+    signInWithGoogle, 
+    isAuthenticated, 
+    loading: authLoading, 
+    error: authError 
+  } = useFirebaseAuth();
+
+  const handleEmailAuth = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    try {
+      if (isSignUp) {
+        await signUp(email, password, displayName);
+      } else {
+        await signIn(email, password);
+      }
+      // Redirect to dashboard on success
+      window.location.href = '/dashboard';
+    } catch (error) {
+      console.error('Authentication error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    try {
+      await signInWithGoogle();
+      window.location.href = '/dashboard';
+    } catch (error) {
+      console.error('Google sign in error:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // If already authenticated, redirect to dashboard
@@ -53,11 +111,14 @@ const Login = () => {
   }
 
   // Show loading state
-  if (isLoading) {
+  if (authLoading) {
     return (
       <PageContainer>
         <LoginContainer elevation={6}>
-          <Typography variant="h6">Loading...</Typography>
+          <CircularProgress color="primary" />
+          <Typography variant="h6" sx={{ mt: 2 }}>
+            Loading...
+          </Typography>
         </LoginContainer>
       </PageContainer>
     );
@@ -73,29 +134,108 @@ const Login = () => {
         <Typography variant="body1" align="center" sx={{ mt: 2, mb: 4 }}>
           Keep track of your League of Legends ranked decay status across multiple accounts
         </Typography>
+
+        {authError && (
+          <Alert severity="error" sx={{ mb: 3, width: '100%' }}>
+            {authError}
+          </Alert>
+        )}
         
-        <Box sx={{ width: '100%', textAlign: 'center' }}>
-          <Auth0Button 
-            variant="contained" 
-            size="large"
-            onClick={handleAuth0Login}
-            startIcon={
-              <Box 
-                component="img" 
-                src="https://cdn.auth0.com/styleguide/components/1.0.8/media/logos/img/badge.png" 
-                alt="Auth0 Logo"
-                sx={{ width: 20, height: 20, filter: 'invert(1)' }}
-              />
-            }
-            fullWidth
-          >
-            SIGN IN WITH AUTH0
-          </Auth0Button>
+        <Box component="form" onSubmit={handleEmailAuth} sx={{ width: '100%' }}>
+          {isSignUp && (
+            <TextField
+              label="Display Name"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              fullWidth
+              margin="normal"
+              variant="outlined"
+              disabled={isLoading}
+            />
+          )}
           
-          <Typography variant="caption" sx={{ display: 'block', mt: 2, mb: 3, color: 'grey.400' }}>
-            Secure authentication powered by Auth0
-          </Typography>
+          <TextField
+            label="Email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            fullWidth
+            margin="normal"
+            variant="outlined"
+            required
+            disabled={isLoading}
+          />
+          
+          <TextField
+            label="Password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            fullWidth
+            margin="normal"
+            variant="outlined"
+            required
+            disabled={isLoading}
+          />
+          
+          <AuthButton
+            type="submit"
+            variant="contained"
+            size="large"
+            fullWidth
+            disabled={isLoading}
+            sx={{ backgroundColor: '#d13639' }}
+          >
+            {isLoading ? (
+              <CircularProgress size={20} color="inherit" />
+            ) : (
+              isSignUp ? 'Sign Up' : 'Sign In'
+            )}
+          </AuthButton>
         </Box>
+
+        <Divider sx={{ width: '100%', my: 3 }}>
+          <Typography variant="body2" color="text.secondary">
+            OR
+          </Typography>
+        </Divider>
+
+        <GoogleButton
+          variant="contained"
+          size="large"
+          onClick={handleGoogleSignIn}
+          disabled={isLoading}
+          startIcon={<GoogleIcon />}
+          fullWidth
+        >
+          {isLoading ? (
+            <CircularProgress size={20} color="inherit" />
+          ) : (
+            'Continue with Google'
+          )}
+        </GoogleButton>
+        
+        <Box sx={{ mt: 3, textAlign: 'center' }}>
+          <Typography variant="body2" color="text.secondary">
+            {isSignUp ? 'Already have an account?' : "Don't have an account?"}
+          </Typography>
+          <Button
+            variant="text"
+            onClick={() => setIsSignUp(!isSignUp)}
+            disabled={isLoading}
+            sx={{ mt: 1 }}
+          >
+            {isSignUp ? 'Sign In' : 'Sign Up'}
+          </Button>
+        </Box>
+
+        {isSignUp && (
+          <Alert severity="info" sx={{ mt: 3, width: '100%' }}>
+            <Typography variant="body2">
+              We'll send you an email verification link. Please verify your email to continue.
+            </Typography>
+          </Alert>
+        )}
       </LoginContainer>
     </PageContainer>
   );

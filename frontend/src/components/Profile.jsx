@@ -26,7 +26,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { styled } from '@mui/material/styles';
-import { useAuth0 } from '@auth0/auth0-react';
+import { useFirebaseAuth } from '../context/FirebaseAuthContext';
 import { userAPI, handleAPIError } from '../services/api.js';
 import { useUserProfile } from '../context/UserProfileContext.jsx';
 
@@ -71,7 +71,7 @@ const TabPanel = ({ children, value, index, ...other }) => (
 );
 
 const Profile = ({ onClose }) => {
-  const { user, logout } = useAuth0();
+  const { user, logout } = useFirebaseAuth();
   const { profile, updateProfile, loading: profileLoading } = useUserProfile();
   const [activeTab, setActiveTab] = useState(0);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -195,7 +195,7 @@ const Profile = ({ onClose }) => {
         severity: 'success'
       });
       setTimeout(() => {
-        logout({ logoutParams: { returnTo: window.location.origin + '/login' } });
+        logout();
       }, 2000);
     } catch (error) {
       setSnackbar({

@@ -31,7 +31,7 @@ import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { styled } from '@mui/material/styles';
-import { useAuth0 } from '@auth0/auth0-react';
+import { useFirebaseAuth } from '../context/FirebaseAuthContext';
 import apiClient, { userAPI, accountsAPI, handleAPIError, clearAuthToken } from '../services/api.js';
 import { useUserProfile } from '../context/UserProfileContext.jsx';
 
@@ -75,7 +75,7 @@ const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
-  const { logout } = useAuth0();
+  const { logout } = useFirebaseAuth();
   const { profile, loading: profileLoading, error: profileError, refresh: refreshProfile, apiClient } = useUserProfile();
   const [missingNameDialogOpen, setMissingNameDialogOpen] = useState(false);
   const [fallbackName, setFallbackName] = useState('');
@@ -272,7 +272,7 @@ const Dashboard = () => {
   };
   
   const handleLogout = () => {
-    logout({ logoutParams: { returnTo: window.location.origin + '/login' } });
+    logout();
   };
 
   const handleUserMenuClick = (event) => {

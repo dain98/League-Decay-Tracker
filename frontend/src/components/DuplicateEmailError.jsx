@@ -9,7 +9,7 @@ import {
   AlertTitle
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import { useAuth0 } from '@auth0/auth0-react';
+import { useFirebaseAuth } from '../context/FirebaseAuthContext';
 import WarningIcon from '@mui/icons-material/Warning';
 
 const ErrorContainer = styled(Container)(({ theme }) => ({
@@ -35,14 +35,11 @@ const ErrorCard = styled(Paper)(({ theme }) => ({
 }));
 
 const DuplicateEmailError = () => {
-  const { logout } = useAuth0();
+  const { logout } = useFirebaseAuth();
 
-  const handleGoBack = () => {
-    logout({ 
-      logoutParams: { 
-        returnTo: window.location.origin + '/login' 
-      } 
-    });
+  const handleGoBack = async () => {
+    await logout();
+    window.location.href = '/login';
   };
 
   return (
