@@ -335,6 +335,11 @@ const Dashboard = () => {
     return <DuplicateEmailError />;
   }
   
+  // Check for DUPLICATE_EMAIL error in profile loading
+  if (profileError === 'DUPLICATE_EMAIL') {
+    return <DuplicateEmailError />;
+  }
+  
   // Show loading state
   if (isLoading && accounts.length === 0) {
     return <LoadingState />;

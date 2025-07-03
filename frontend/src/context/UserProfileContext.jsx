@@ -43,7 +43,12 @@ export const UserProfileProvider = ({ children }) => {
         setError('Failed to load user profile');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load user profile');
+      // Handle specific error types
+      if (err.response?.data?.error === 'DUPLICATE_EMAIL') {
+        setError('DUPLICATE_EMAIL');
+      } else {
+        setError(err.response?.data?.message || 'Failed to load user profile');
+      }
     } finally {
       setLoading(false);
     }
