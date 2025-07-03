@@ -138,6 +138,14 @@ export const FirebaseAuthProvider = ({ children }) => {
     return await user.getIdToken();
   };
 
+  // Send email verification
+  const sendVerificationEmail = async () => {
+    if (!user) {
+      throw new Error('No user is signed in');
+    }
+    return await sendEmailVerification(user);
+  };
+
   // Listen for auth state changes
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -158,6 +166,7 @@ export const FirebaseAuthProvider = ({ children }) => {
     signInWithGoogle,
     logout,
     getIdToken,
+    sendVerificationEmail,
     isAuthenticated: !!user
   };
 

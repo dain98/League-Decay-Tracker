@@ -12,7 +12,7 @@ import { Email, Refresh, Logout } from '@mui/icons-material';
 import { useFirebaseAuth } from '../context/FirebaseAuthContext';
 
 const EmailNotVerified = () => {
-  const { user, logout } = useFirebaseAuth();
+  const { user, logout, sendVerificationEmail } = useFirebaseAuth();
   const [isResending, setIsResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
   const [resendError, setResendError] = useState('');
@@ -25,7 +25,7 @@ const EmailNotVerified = () => {
     setResendSuccess(false);
     
     try {
-      await user.sendEmailVerification();
+      await sendVerificationEmail();
       setResendSuccess(true);
     } catch (error) {
       console.error('Error sending verification email:', error);
