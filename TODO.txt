@@ -1,0 +1,6 @@
+- Add user/pass authentication
+- Fix remakes (they shouldn't count, but they do)
+- Find some way to test edge cases
+- Add email verification of some kind
+- Add email notification
+- Allow same account to be added by multiple users

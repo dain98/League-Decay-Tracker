@@ -27,13 +27,6 @@ router.get('/me', authenticateToken, async (req, res) => {
       }
     });
   } catch (error) {
-    if (error.message === 'MISSING_NAME') {
-      return res.status(400).json({
-        success: false,
-        error: 'MISSING_NAME',
-        message: 'No name, nickname, or email available. Please provide a name.'
-      });
-    }
     if (error.message === 'DUPLICATE_EMAIL') {
       return res.status(400).json({
         success: false,
@@ -134,13 +127,6 @@ router.get('/me/accounts', authenticateToken, async (req, res) => {
       data: accounts.leagueAccounts || []
     });
   } catch (error) {
-    if (error.message === 'MISSING_NAME') {
-      return res.status(400).json({
-        success: false,
-        error: 'MISSING_NAME',
-        message: 'No name, nickname, or email available. Please provide a name.'
-      });
-    }
     if (error.message === 'DUPLICATE_EMAIL') {
       return res.status(400).json({
         success: false,

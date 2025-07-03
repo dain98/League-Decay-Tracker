@@ -85,6 +85,9 @@ export const authenticateToken = async (req, res, next) => {
 
     // Fetch the full user profile from Auth0
     const userProfile = await getUserProfileFromAuth0(token);
+    
+    // Debug logging to see what we get from /userinfo
+    console.log('User profile from /userinfo endpoint:', userProfile);
 
     // Add user info to request
     req.user = userProfile;

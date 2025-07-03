@@ -65,18 +65,21 @@ userSchema.pre('save', function(next) {
 userSchema.statics.findOrCreateFromAuth0 = async function(auth0User, fallbackName) {
   try {
     console.log('Auth0 user received in findOrCreateFromAuth0:', auth0User);
-    let user = await this.findOne({ auth0Id: auth0User.sub });
+    
+    // Handle both 'sub' and 'user_id' field names
+    const auth0Id = auth0User.sub || auth0User.user_id;
+    if (!auth0Id) {
+      throw new Error('Missing Auth0 user ID (sub or user_id)');
+    }
+    
+    let user = await this.findOne({ auth0Id: auth0Id });
 
     // Robust extraction with fallback
-    let name = auth0User.name || auth0User.nickname || auth0User.email || fallbackName;
+    let name = auth0User.name || auth0User.nickname || auth0User.email || fallbackName || 'New User';
     const email = auth0User.email;
     const picture = auth0User.picture;
     const emailVerified = auth0User.email_verified;
     const nickname = auth0User.nickname;
-
-    if (!name) {
-      throw new Error('MISSING_NAME');
-    }
 
     if (!user) {
       // Check for duplicate email
@@ -88,7 +91,7 @@ userSchema.statics.findOrCreateFromAuth0 = async function(auth0User, fallbackNam
       }
       // Create new user with Auth0 data
       user = new this({
-        auth0Id: auth0User.sub,
+        auth0Id: auth0Id,
         email: email,
         name: name,
         picture: picture,
@@ -107,7 +110,7 @@ userSchema.statics.findOrCreateFromAuth0 = async function(auth0User, fallbackNam
     }
     return user;
   } catch (error) {
-    if (error.message === 'MISSING_NAME' || error.message === 'DUPLICATE_EMAIL') {
+    if (error.message === 'DUPLICATE_EMAIL') {
       throw error;
     }
     // Handle MongoDB duplicate key error for email

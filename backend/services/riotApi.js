@@ -43,6 +43,69 @@ const createRiotApiClient = (baseURL) => {
   });
 };
 
+// --- Rate limit helper imports ---
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+// Token bucket for 20 req/sec and 100 req/2min
+const RATE_LIMITS = [
+  { max: 20, windowMs: 1000, tokens: 20, lastRefill: Date.now() },
+  { max: 100, windowMs: 120000, tokens: 100, lastRefill: Date.now() }
+];
+
+async function acquireRiotApiToken() {
+  while (true) {
+    const now = Date.now();
+    let canProceed = true;
+    for (const limit of RATE_LIMITS) {
+      // Refill tokens
+      const elapsed = now - limit.lastRefill;
+      const refill = Math.floor(elapsed / limit.windowMs) * limit.max;
+      if (refill > 0) {
+        limit.tokens = Math.min(limit.max, limit.tokens + refill);
+        limit.lastRefill = now;
+      }
+      if (limit.tokens <= 0) {
+        canProceed = false;
+      }
+    }
+    if (canProceed) {
+      for (const limit of RATE_LIMITS) limit.tokens--;
+      return;
+    }
+    // Wait for the shortest window
+    const minWait = Math.min(...RATE_LIMITS.map(l => l.windowMs));
+    await sleep(minWait / 10);
+  }
+}
+
+async function riotApiRequest(requestFn) {
+  let attempts = 0;
+  while (true) {
+    await acquireRiotApiToken();
+    try {
+      return await requestFn();
+    } catch (error) {
+      if (error.response?.status === 429) {
+        // Check Retry-After header
+        let wait = 2000;
+        const retryAfter = error.response.headers['retry-after'];
+        if (retryAfter) {
+          // Retry-After can be seconds or a date
+          const parsed = parseInt(retryAfter, 10);
+          if (!isNaN(parsed)) {
+            wait = parsed * 1000;
+          }
+        }
+        await sleep(wait);
+        attempts++;
+        if (attempts > 5) throw new Error('Rate limit exceeded after retries');
+        continue;
+      }
+      throw error;
+    }
+  }
+}
+
 // Get account information by game name and tag line
 export const getRiotAccountInfo = async (gameName, tagLine, region) => {
   try {
@@ -59,7 +122,7 @@ export const getRiotAccountInfo = async (gameName, tagLine, region) => {
     const client = createRiotApiClient(baseURL);
 
     // Updated endpoint format: /riot/account/v1/accounts/by-riot-id/{gameName}/{tagLine}
-    const response = await client.get(`/riot/account/v1/accounts/by-riot-id/${gameName}/${tagLine}`);
+    const response = await riotApiRequest(() => client.get(`/riot/account/v1/accounts/by-riot-id/${gameName}/${tagLine}`));
 
     return {
       puuid: response.data.puuid,
@@ -96,7 +159,7 @@ export const getSummonerInfo = async (puuid, region) => {
     const baseURL = `https://${platformRouting}.api.riotgames.com`;
     const client = createRiotApiClient(baseURL);
 
-    const response = await client.get(`/lol/summoner/v4/summoners/by-puuid/${puuid}`);
+    const response = await riotApiRequest(() => client.get(`/lol/summoner/v4/summoners/by-puuid/${puuid}`));
 
     return {
       id: response.data.id,
@@ -130,7 +193,7 @@ export const getRiotRankInfo = async (puuid, region) => {
     const baseURL = `https://${platformRouting}.api.riotgames.com`;
     const client = createRiotApiClient(baseURL);
 
-    const response = await client.get(`/lol/league/v4/entries/by-puuid/${puuid}`);
+    const response = await riotApiRequest(() => client.get(`/lol/league/v4/entries/by-puuid/${puuid}`));
 
     // Find solo/duo queue entry
     const soloDuoEntry = response.data.find(entry => entry.queueType === 'RANKED_SOLO_5x5');
@@ -185,12 +248,12 @@ export const getMatchHistory = async (puuid, region, count = 20) => {
     const baseURL = BASE_URLS[regionalRouting];
     const client = createRiotApiClient(baseURL);
 
-    const response = await client.get(`/lol/match/v5/matches/by-puuid/${puuid}/ids`, {
+    const response = await riotApiRequest(() => client.get(`/lol/match/v5/matches/by-puuid/${puuid}/ids`, {
       params: {
         count: count,
         queue: 420 // Ranked Solo/Duo queue
       }
-    });
+    }));
 
     return response.data;
   } catch (error) {
@@ -216,13 +279,13 @@ export const getRankedSoloDuoMatchHistory = async (puuid, region, count = 20) =>
     const baseURL = BASE_URLS[regionalRouting];
     const client = createRiotApiClient(baseURL);
 
-    const response = await client.get(`/lol/match/v5/matches/by-puuid/${puuid}/ids`, {
+    const response = await riotApiRequest(() => client.get(`/lol/match/v5/matches/by-puuid/${puuid}/ids`, {
       params: {
         count: count,
         queue: 420, // Ranked Solo/Duo queue
         type: 'ranked'
       }
-    });
+    }));
 
     return response.data;
   } catch (error) {
@@ -248,7 +311,7 @@ export const getMatchDetails = async (matchId, region) => {
     const baseURL = BASE_URLS[regionalRouting];
     const client = createRiotApiClient(baseURL);
 
-    const response = await client.get(`/lol/match/v5/matches/${matchId}`);
+    const response = await riotApiRequest(() => client.get(`/lol/match/v5/matches/${matchId}`));
 
     return response.data;
   } catch (error) {
@@ -490,7 +553,7 @@ export const validateApiKey = async () => {
 
     // Test with a simple API call using the new format
     const client = createRiotApiClient('https://americas.api.riotgames.com');
-    await client.get('/riot/account/v1/accounts/by-riot-id/test/test');
+    await riotApiRequest(() => client.get('/riot/account/v1/accounts/by-riot-id/test/test'));
 
     return { valid: true, message: 'API key is valid' };
   } catch (error) {
