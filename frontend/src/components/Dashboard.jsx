@@ -42,6 +42,7 @@ import GlobalDecayCountdown from './GlobalDecayCountdown';
 import UserMenu from './UserMenu';
 import Profile from './Profile';
 import { LoadingState, ErrorState, NoUserState, EmptyAccountsState } from './DashboardStates';
+import DuplicateEmailError from './DuplicateEmailError';
 
 // Styled components
 const DashboardContainer = styled(Container)(({ theme }) => ({
@@ -81,6 +82,7 @@ const Dashboard = () => {
   const [pendingLoad, setPendingLoad] = useState(false);
   const [userMenuAnchor, setUserMenuAnchor] = useState(null);
   const [showProfile, setShowProfile] = useState(false);
+  const [showDuplicateEmailError, setShowDuplicateEmailError] = useState(false);
 
   const loadData = async (fallbackNameParam) => {
     if (!apiClient) {
@@ -106,7 +108,7 @@ const Dashboard = () => {
         return;
       }
       if (error.response && error.response.data && error.response.data.error === 'DUPLICATE_EMAIL') {
-        setError('An account with this email already exists. Please log in using your original provider.');
+        setShowDuplicateEmailError(true);
         return;
       }
       setError(error.response?.data?.message || 'Failed to load accounts');
@@ -325,6 +327,11 @@ const Dashboard = () => {
       setIsLoading(false);
     }
   };
+  
+  // Show duplicate email error page
+  if (showDuplicateEmailError) {
+    return <DuplicateEmailError />;
+  }
   
   // Show loading state
   if (isLoading && accounts.length === 0) {
