@@ -2,7 +2,7 @@ import React from 'react';
 import { Container, Typography, Paper, Box } from '@mui/material';
 
 const PrivacyPolicy = () => (
-  <Container maxWidth="md" sx={{ mt: 8, mb: 8 }}>
+  <Container maxWidth="md" sx={{ mt: 8, mb: 8, flex: 1 }}>
     <Paper elevation={3} sx={{ p: 4 }}>
       <Typography variant="h3" gutterBottom>
         Privacy Policy

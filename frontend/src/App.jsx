@@ -9,6 +9,7 @@ import DuplicateEmailError from './components/DuplicateEmailError';
 import { useDataDragon } from './hooks/useDataDragon.js';
 import TermsOfService from './components/TermsOfService';
 import PrivacyPolicy from './components/PrivacyPolicy';
+import Footer from './components/Footer';
 import './App.css';
 
 // Create a dark theme (Riot-inspired theme)
@@ -65,21 +66,24 @@ function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Router>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/duplicate-email" element={<DuplicateEmailError />} />
-          <Route path="/terms" element={<TermsOfService />} />
-          <Route path="/privacy" element={<PrivacyPolicy />} />
-          <Route 
-            path="/dashboard" 
-            element={
-              <AuthGuard>
-                <Dashboard />
-              </AuthGuard>
-            } 
-          />
-          <Route path="/" element={<Navigate to="/login" replace />} />
-        </Routes>
+        <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/duplicate-email" element={<DuplicateEmailError />} />
+            <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route 
+              path="/dashboard" 
+              element={
+                <AuthGuard>
+                  <Dashboard />
+                </AuthGuard>
+              } 
+            />
+            <Route path="/" element={<Navigate to="/login" replace />} />
+          </Routes>
+          <Footer />
+        </div>
       </Router>
     </ThemeProvider>
   );

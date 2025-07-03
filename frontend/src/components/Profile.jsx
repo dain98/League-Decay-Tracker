@@ -1,415 +1,298 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import {
-  Box,
   Container,
   Paper,
   Typography,
-  Avatar,
-  Button,
   TextField,
+  Button,
+  Box,
+  Avatar,
+  CircularProgress,
+  Alert,
+  IconButton,
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions,
-  Tabs,
-  Tab,
-  IconButton,
-  Divider,
-  Alert,
-  Snackbar,
-  AppBar,
-  Toolbar
+  DialogActions
 } from '@mui/material';
-import EditIcon from '@mui/icons-material/Edit';
-import SettingsIcon from '@mui/icons-material/Settings';
-import PersonIcon from '@mui/icons-material/Person';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import DeleteIcon from '@mui/icons-material/Delete';
-import { styled } from '@mui/material/styles';
+import { PhotoCamera, Save, Cancel, Edit } from '@mui/icons-material';
+import { useUserProfile } from '../context/UserProfileContext';
 import { useFirebaseAuth } from '../context/FirebaseAuthContext';
-import { userAPI, handleAPIError } from '../services/api.js';
-import { useUserProfile } from '../context/UserProfileContext.jsx';
-
-// Styled components
-const ProfileContainer = styled(Container)(({ theme }) => ({
-  marginTop: theme.spacing(10),
-  marginBottom: theme.spacing(4),
-}));
-
-const ProfileCard = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(3),
-  backgroundColor: theme.palette.background.paper,
-}));
-
-const InfoSection = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  padding: theme.spacing(2),
-  marginBottom: theme.spacing(2),
-  backgroundColor: theme.palette.action.hover,
-  borderRadius: theme.spacing(1),
-  border: `1px solid ${theme.palette.divider}`,
-}));
-
-const InfoContent = styled(Box)({
-  display: 'flex',
-  alignItems: 'center',
-  gap: 16,
-});
-
-const TabPanel = ({ children, value, index, ...other }) => (
-  <div
-    role="tabpanel"
-    hidden={value !== index}
-    id={`profile-tabpanel-${index}`}
-    aria-labelledby={`profile-tab-${index}`}
-    {...other}
-  >
-    {value === index && <Box sx={{ pt: 3 }}>{children}</Box>}
-  </div>
-);
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage } from '../config/firebase';
 
 const Profile = ({ onClose }) => {
-  const { user, logout } = useFirebaseAuth();
-  const { profile, updateProfile, loading: profileLoading } = useUserProfile();
-  const [activeTab, setActiveTab] = useState(0);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editingField, setEditingField] = useState(null);
-  const [editValue, setEditValue] = useState('');
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
-  const [localProfile, setLocalProfile] = useState(profile);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const { profile, updateProfile, loading, error } = useUserProfile();
+  const { user } = useFirebaseAuth();
+  const [formData, setFormData] = useState({
+    name: profile?.name || '',
+    nickname: profile?.nickname || ''
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null);
+  const [showImageDialog, setShowImageDialog] = useState(false);
+  const fileInputRef = useRef();
 
-  useEffect(() => {
-    setLocalProfile(profile);
-  }, [profile]);
-
-  const handleTabChange = (event, newValue) => {
-    setActiveTab(newValue);
+  const handleInputChange = (field) => (event) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: event.target.value
+    }));
   };
 
-  const handleEditClick = (field, currentValue) => {
-    setEditingField(field);
-    setEditValue(currentValue || '');
-    setEditDialogOpen(true);
+  const handleImageClick = () => {
+    setShowImageDialog(true);
   };
 
-  const handleEditSave = async () => {
-    try {
-      const updateData = {};
-      updateData[editingField] = editValue;
-      const response = await updateProfile(updateData);
-      console.log('Profile update response:', response);
-      if (response.success && response.data) {
-        setLocalProfile(response.data);
+  const handleFileSelect = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file');
+        return;
       }
-      setSnackbar({
-        open: true,
-        message: `${getFieldLabel(editingField)} updated successfully!`,
-        severity: 'success'
-      });
-      setEditDialogOpen(false);
-    } catch (error) {
-      console.error('Profile update error:', error);
-      setSnackbar({
-        open: true,
-        message: `Failed to update ${getFieldLabel(editingField)}: ${handleAPIError(error)}`,
-        severity: 'error'
-      });
-    }
-  };
-
-  const handleEditCancel = () => {
-    setEditDialogOpen(false);
-    setEditingField(null);
-    setEditValue('');
-  };
-
-  const getFieldLabel = (field) => {
-    switch (field) {
-      case 'name': return 'Name';
-      case 'email': return 'Email Address';
-      case 'picture': return 'Profile Picture';
-      default: return field;
-    }
-  };
-
-  const getFieldType = (field) => {
-    switch (field) {
-      case 'email': return 'email';
-      case 'picture': return 'url';
-      default: return 'text';
-    }
-  };
-
-  const getFieldPlaceholder = (field) => {
-    switch (field) {
-      case 'name': return 'Enter your name';
-      case 'email': return 'Enter your email address';
-      case 'picture': return 'Enter profile picture URL';
-      default: return `Enter your ${field}`;
-    }
-  };
-
-  const validateField = (field, value) => {
-    if (!value.trim()) return `${getFieldLabel(field)} cannot be empty`;
-    if (field === 'email') {
-      // Robust email regex
-      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-      if (!emailRegex.test(value)) return 'Please enter a valid email address';
-    }
-    if (field === 'picture') {
-      try {
-        new URL(value);
-      } catch {
-        return 'Please enter a valid URL';
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image size must be less than 5MB');
+        return;
       }
+
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setPreviewImage(e.target.result);
+      };
+      reader.readAsDataURL(file);
     }
-    return null;
   };
 
-  const handleEditSaveWithValidation = () => {
-    const error = validateField(editingField, editValue);
-    if (error) {
-      setSnackbar({
-        open: true,
-        message: error,
-        severity: 'error'
-      });
-      return;
-    }
-    handleEditSave();
-  };
+  const handleImageUpload = async () => {
+    if (!fileInputRef.current?.files[0] || !user) return;
 
-  // Delete account logic
-  const handleDeleteAccount = async () => {
-    setDeleting(true);
+    const file = fileInputRef.current.files[0];
+    setIsUploading(true);
+    setUploadProgress(0);
+
     try {
-      // Call backend to delete account
-      await userAPI.deleteMe();
-      setSnackbar({
-        open: true,
-        message: 'Account deleted successfully. Logging out...',
-        severity: 'success'
-      });
-      setTimeout(() => {
-        logout();
-      }, 2000);
+      // Create a unique filename
+      const fileExtension = file.name.split('.').pop();
+      const fileName = `avatars/${user.uid}_${Date.now()}.${fileExtension}`;
+      
+      // Upload to Firebase Storage
+      const storageRef = ref(storage, fileName);
+      
+      // Simulate upload progress (Firebase doesn't provide progress for uploadBytes)
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => Math.min(prev + 10, 90));
+      }, 100);
+
+      await uploadBytes(storageRef, file);
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+
+      // Get download URL
+      const downloadURL = await getDownloadURL(storageRef);
+      
+      // Update profile with new avatar URL
+      await updateProfile({ picture: downloadURL });
+      
+      setShowImageDialog(false);
+      setPreviewImage(null);
+      setUploadProgress(0);
+      
     } catch (error) {
-      setSnackbar({
-        open: true,
-        message: `Failed to delete account: ${handleAPIError(error)}`,
-        severity: 'error'
-      });
+      console.error('Error uploading image:', error);
+      alert('Failed to upload image. Please try again.');
     } finally {
-      setDeleting(false);
-      setDeleteDialogOpen(false);
+      setIsUploading(false);
+      setUploadProgress(0);
     }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    try {
+      await updateProfile(formData);
+      onClose();
+    } catch (error) {
+      console.error('Error updating profile:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setFormData({
+      name: profile?.name || '',
+      nickname: profile?.nickname || ''
+    });
+    onClose();
   };
 
   return (
-    <>
-      <AppBar position="fixed">
-        <Toolbar>
-          <IconButton
-            edge="start"
-            color="inherit"
-            onClick={onClose}
-            sx={{ mr: 2 }}
-          >
-            <ArrowBackIcon />
-          </IconButton>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Profile Settings
-          </Typography>
-        </Toolbar>
-      </AppBar>
-      
-      <ProfileContainer maxWidth="md">
-        <ProfileCard elevation={3}>
-          <Typography variant="h4" gutterBottom>
-            Profile Settings
-          </Typography>
-          
-          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-            <Tabs value={activeTab} onChange={handleTabChange}>
-              <Tab 
-                icon={<PersonIcon />} 
-                label="General" 
-                iconPosition="start"
-              />
-              <Tab 
-                icon={<SettingsIcon />} 
-                label="Settings" 
-                iconPosition="start"
-              />
-            </Tabs>
+    <Container maxWidth="md" sx={{ mt: 10, mb: 4 }}>
+      <Paper elevation={3} sx={{ p: 4 }}>
+        <Typography variant="h4" gutterBottom>
+          Profile Settings
+        </Typography>
+
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+        )}
+
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
+          <Box sx={{ position: 'relative', mr: 3 }}>
+            <Avatar
+              src={profile?.picture || user?.photoURL}
+              sx={{ 
+                width: 100, 
+                height: 100, 
+                cursor: 'pointer',
+                border: '3px solid #e0e0e0'
+              }}
+              onClick={handleImageClick}
+            />
+            <IconButton
+              sx={{
+                position: 'absolute',
+                bottom: 0,
+                right: 0,
+                backgroundColor: 'primary.main',
+                color: 'white',
+                '&:hover': {
+                  backgroundColor: 'primary.dark',
+                }
+              }}
+              size="small"
+              onClick={handleImageClick}
+            >
+              <Edit />
+            </IconButton>
           </Box>
-
-          <TabPanel value={activeTab} index={0}>
-            <Typography variant="h6" gutterBottom>
-              Personal Information
+          
+          <Box>
+            <Typography variant="h6">
+              {profile?.name || user?.displayName || 'User'}
             </Typography>
-            
-            {/* Profile Picture */}
-            <InfoSection>
-              <InfoContent>
-                <Avatar
-                  src={localProfile?.picture || editValue}
-                  alt={localProfile?.name || 'User'}
-                  sx={{ width: 64, height: 64 }}
-                />
-                <Box>
-                  <Typography variant="subtitle1" fontWeight="bold">
-                    Profile Picture
-                  </Typography>
-                  <Typography variant="body2">
-                    {localProfile?.picture ? 'Custom profile picture' : 'No profile picture set'}
-                  </Typography>
-                </Box>
-              </InfoContent>
-              <IconButton 
-                onClick={() => handleEditClick('picture', localProfile?.picture)}
-                color="primary"
-              >
-                <EditIcon />
-              </IconButton>
-            </InfoSection>
-
-            {/* Name */}
-            <InfoSection>
-              <InfoContent>
-                <Box>
-                  <Typography variant="subtitle1" fontWeight="bold">
-                    Name
-                  </Typography>
-                  <Typography variant="body2">
-                    {localProfile?.name || 'No name set'}
-                  </Typography>
-                </Box>
-              </InfoContent>
-              <IconButton 
-                onClick={() => handleEditClick('name', localProfile?.name)}
-                color="primary"
-              >
-                <EditIcon />
-              </IconButton>
-            </InfoSection>
-
-            {/* Email */}
-            <InfoSection>
-              <InfoContent>
-                <Box>
-                  <Typography variant="subtitle1" fontWeight="bold">
-                    Email Address
-                  </Typography>
-                  <Typography variant="body2">
-                    {localProfile?.email || 'No email set'}
-                  </Typography>
-                </Box>
-              </InfoContent>
-              <IconButton 
-                onClick={() => handleEditClick('email', localProfile?.email)}
-                color="primary"
-              >
-                <EditIcon />
-              </IconButton>
-            </InfoSection>
-
-            {/* Delete Account Button */}
-            <Box sx={{ mt: 6, display: 'flex', justifyContent: 'center' }}>
-              <Button
-                variant="contained"
-                color="error"
-                startIcon={<DeleteIcon />}
-                sx={{ fontWeight: 'bold', letterSpacing: 1, fontSize: 16, p: 2, textTransform: 'uppercase' }}
-                onClick={() => setDeleteDialogOpen(true)}
-              >
-                DELETE ACCOUNT
-              </Button>
-            </Box>
-          </TabPanel>
-
-          <TabPanel value={activeTab} index={1}>
-            <Typography variant="h6" gutterBottom>
-              Account Settings
+            <Typography variant="body2" color="text.secondary">
+              {profile?.email || user?.email}
             </Typography>
-            <Typography variant="body2">
-              Settings page coming soon...
+            <Typography variant="body2" color="text.secondary">
+              Email {profile?.emailVerified || user?.emailVerified ? '✓ Verified' : '✗ Not Verified'}
             </Typography>
-          </TabPanel>
-        </ProfileCard>
-      </ProfileContainer>
+          </Box>
+        </Box>
 
-      {/* Edit Dialog */}
-      <Dialog open={editDialogOpen} onClose={handleEditCancel} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          Edit {getFieldLabel(editingField)}
-        </DialogTitle>
-        <DialogContent>
+        <form onSubmit={handleSubmit}>
           <TextField
-            autoFocus
-            margin="dense"
-            label={getFieldLabel(editingField)}
-            type={getFieldType(editingField)}
             fullWidth
-            variant="outlined"
-            value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
-            placeholder={getFieldPlaceholder(editingField)}
-            sx={{ mt: 2 }}
+            label="Display Name"
+            value={formData.name}
+            onChange={handleInputChange('name')}
+            margin="normal"
+            required
           />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleEditCancel}>
-            Cancel
-          </Button>
-          <Button onClick={handleEditSaveWithValidation} variant="contained">
-            Save
-          </Button>
-        </DialogActions>
-      </Dialog>
+          
+          <TextField
+            fullWidth
+            label="Nickname (Optional)"
+            value={formData.nickname}
+            onChange={handleInputChange('nickname')}
+            margin="normal"
+            helperText="A shorter name or alias"
+          />
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-        <DialogTitle sx={{ color: 'error.main', fontWeight: 'bold', textTransform: 'uppercase' }}>
-          Confirm Account Deletion
-        </DialogTitle>
+          <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
+            <Button
+              type="submit"
+              variant="contained"
+              startIcon={isSubmitting ? <CircularProgress size={20} /> : <Save />}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Saving...' : 'Save Changes'}
+            </Button>
+            
+            <Button
+              variant="outlined"
+              onClick={handleCancel}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+          </Box>
+        </form>
+      </Paper>
+
+      {/* Image Upload Dialog */}
+      <Dialog open={showImageDialog} onClose={() => setShowImageDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Update Profile Picture</DialogTitle>
         <DialogContent>
-          <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'error.main', mb: 2 }}>
-            THIS ACTION CANNOT BE UNDONE.
-          </Typography>
-          <Typography variant="body2">
-            Are you sure you want to <b>permanently delete</b> your account and all associated data? This cannot be undone.
-          </Typography>
+          <Box sx={{ textAlign: 'center', py: 2 }}>
+            {previewImage ? (
+              <Avatar
+                src={previewImage}
+                sx={{ width: 150, height: 150, mx: 'auto', mb: 2 }}
+              />
+            ) : (
+              <Avatar
+                src={profile?.picture || user?.photoURL}
+                sx={{ width: 150, height: 150, mx: 'auto', mb: 2 }}
+              />
+            )}
+            
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileSelect}
+              style={{ display: 'none' }}
+            />
+            
+            <Button
+              variant="outlined"
+              startIcon={<PhotoCamera />}
+              onClick={() => fileInputRef.current?.click()}
+              sx={{ mb: 2 }}
+            >
+              Choose Image
+            </Button>
+            
+            {isUploading && (
+              <Box sx={{ mt: 2 }}>
+                <CircularProgress variant="determinate" value={uploadProgress} />
+                <Typography variant="body2" sx={{ mt: 1 }}>
+                  Uploading... {uploadProgress}%
+                </Typography>
+              </Box>
+            )}
+            
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+              Supported formats: JPG, PNG, GIF (max 5MB)
+            </Typography>
+          </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)} disabled={deleting}>
+          <Button onClick={() => setShowImageDialog(false)} disabled={isUploading}>
             Cancel
           </Button>
-          <Button onClick={handleDeleteAccount} color="error" variant="contained" disabled={deleting}>
-            {deleting ? 'Deleting...' : 'DELETE ACCOUNT'}
+          <Button
+            onClick={handleImageUpload}
+            variant="contained"
+            disabled={!previewImage || isUploading}
+          >
+            {isUploading ? 'Uploading...' : 'Upload'}
           </Button>
         </DialogActions>
       </Dialog>
-
-      {/* Snackbar for notifications */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-      >
-        <Alert 
-          onClose={() => setSnackbar({ ...snackbar, open: false })} 
-          severity={snackbar.severity}
-          sx={{ width: '100%' }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-    </>
+    </Container>
   );
 };
 

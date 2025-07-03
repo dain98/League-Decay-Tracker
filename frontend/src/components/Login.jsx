@@ -18,14 +18,11 @@ const PageContainer = styled(Box)({
   display: 'flex',
   justifyContent: 'center',
   alignItems: 'center',
-  minHeight: '100vh',
+  flex: 1,
   width: '100%',
   padding: 0,
   margin: 0,
   backgroundColor: '#091428',
-  position: 'absolute',
-  top: 0,
-  left: 0,
 });
 
 const LoginContainer = styled(Paper)(({ theme }) => ({

@@ -44,7 +44,7 @@ const EmailNotVerified = () => {
   };
 
   return (
-    <Container maxWidth="sm" sx={{ mt: 8 }}>
+    <Container maxWidth="sm" sx={{ mt: 8, flex: 1 }}>
       <Paper elevation={3} sx={{ p: 4, textAlign: 'center' }}>
         <Email sx={{ fontSize: 64, color: 'warning.main', mb: 2 }} />
         
