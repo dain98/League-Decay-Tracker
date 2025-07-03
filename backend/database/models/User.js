@@ -1,8 +1,7 @@
 import mongoose from 'mongoose';
-import axios from 'axios';
 
 const userSchema = new mongoose.Schema({
-  auth0Id: {
+  firebaseUid: {
     type: String,
     required: true,
     unique: true,
@@ -61,29 +60,28 @@ userSchema.pre('save', function(next) {
   next();
 });
 
-// Static method to find or create user from Auth0 data
-userSchema.statics.findOrCreateFromAuth0 = async function(auth0User, fallbackName) {
+// Static method to find or create user from Firebase data
+userSchema.statics.findOrCreateFromFirebase = async function(firebaseUser, fallbackName) {
   try {
-    console.log('Auth0 user received in findOrCreateFromAuth0:', auth0User);
+    console.log('Firebase user received in findOrCreateFromFirebase:', firebaseUser);
     
-    // Handle both 'sub' and 'user_id' field names
-    const auth0Id = auth0User.sub || auth0User.user_id;
-    console.log('Extracted auth0Id:', auth0Id);
+    const firebaseUid = firebaseUser.sub || firebaseUser.uid;
+    console.log('Extracted firebaseUid:', firebaseUid);
     
-    if (!auth0Id) {
-      throw new Error('Missing Auth0 user ID (sub or user_id)');
+    if (!firebaseUid) {
+      throw new Error('Missing Firebase user ID (sub or uid)');
     }
     
-    console.log('Looking for existing user with auth0Id:', auth0Id);
-    let user = await this.findOne({ auth0Id: auth0Id });
+    console.log('Looking for existing user with firebaseUid:', firebaseUid);
+    let user = await this.findOne({ firebaseUid: firebaseUid });
     console.log('Existing user found:', user ? 'Yes' : 'No');
 
     // Robust extraction with fallback
-    let name = auth0User.name || auth0User.nickname || auth0User.email || fallbackName || 'New User';
-    const email = auth0User.email;
-    const picture = auth0User.picture;
-    const emailVerified = auth0User.email_verified;
-    const nickname = auth0User.nickname;
+    let name = firebaseUser.name || firebaseUser.nickname || firebaseUser.email || fallbackName || 'New User';
+    const email = firebaseUser.email;
+    const picture = firebaseUser.picture;
+    const emailVerified = firebaseUser.email_verified;
+    const nickname = firebaseUser.nickname;
     
     console.log('Extracted user data:', {
       name,
@@ -100,13 +98,13 @@ userSchema.statics.findOrCreateFromAuth0 = async function(auth0User, fallbackNam
         console.log('Checking for duplicate email:', email);
         const existingEmailUser = await this.findOne({ email });
         if (existingEmailUser) {
-          console.log('Duplicate email found:', existingEmailUser.auth0Id);
+          console.log('Duplicate email found:', existingEmailUser.firebaseUid);
           throw new Error('DUPLICATE_EMAIL');
         }
       }
-      // Create new user with Auth0 data
+      // Create new user with Firebase data
       const userData = {
-        auth0Id: auth0Id,
+        firebaseUid: firebaseUid,
         email: email,
         name: name,
         picture: picture,
@@ -121,7 +119,7 @@ userSchema.statics.findOrCreateFromAuth0 = async function(auth0User, fallbackNam
       console.log('User saved successfully');
     } else {
       console.log('Updating existing user...');
-      // Do NOT overwrite user-editable fields with Auth0 data
+      // Do NOT overwrite user-editable fields with Firebase data
       // Optionally, update emailVerified if it changed
       if (typeof emailVerified === 'boolean' && user.emailVerified !== emailVerified) {
         user.emailVerified = emailVerified;
@@ -133,7 +131,7 @@ userSchema.statics.findOrCreateFromAuth0 = async function(auth0User, fallbackNam
     console.log('Returning user:', user._id);
     return user;
   } catch (error) {
-    console.error('Error in findOrCreateFromAuth0:', error);
+    console.error('Error in findOrCreateFromFirebase:', error);
     if (error.message === 'DUPLICATE_EMAIL') {
       throw error;
     }
@@ -144,15 +142,6 @@ userSchema.statics.findOrCreateFromAuth0 = async function(auth0User, fallbackNam
     throw new Error(`Error finding or creating user: ${error.message}`);
   }
 };
-
-async function getUserProfileFromAuth0(accessToken) {
-  const response = await axios.get('https://YOUR_DOMAIN.auth0.com/userinfo', {
-    headers: {
-      Authorization: `Bearer ${accessToken}`
-    }
-  });
-  return response.data;
-}
 
 const User = mongoose.model('User', userSchema);
 

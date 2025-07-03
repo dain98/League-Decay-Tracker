@@ -1,73 +1,36 @@
-import jwt from 'jsonwebtoken';
-import jwksClient from 'jwks-rsa';
 import dotenv from 'dotenv';
-import getUserProfileFromAuth0 from '../services/auth0.js';
+import { auth } from '../config/firebase.js';
 
 dotenv.config();
 
-const AUTH0_DOMAIN = process.env.AUTH0_DOMAIN;
-const AUTH0_AUDIENCE = process.env.AUTH0_AUDIENCE;
-
-// JWKS client for token verification
-const client = jwksClient({
-  jwksUri: `https://${AUTH0_DOMAIN}/.well-known/jwks.json`,
-  cache: true,
-  cacheMaxEntries: 5,
-  cacheMaxAge: 600000, // 10 minutes
-});
-
-// Get signing key for token verification
-const getSigningKey = (kid) => {
-  return new Promise((resolve, reject) => {
-    client.getSigningKey(kid, (err, key) => {
-      if (err) {
-        reject(err);
-      } else {
-        const signingKey = key.publicKey || key.rsaPublicKey;
-        resolve(signingKey);
-      }
-    });
-  });
-};
-
-// Verify JWT token
+// Verify Firebase ID token
 const verifyToken = async (token) => {
   try {
-    const decoded = jwt.decode(token, { complete: true });
-    
-    if (!decoded) {
-      throw new Error('Invalid token format');
-    }
-    
-    const { header, payload } = decoded;
-    
-    // Verify token issuer
-    if (payload.iss !== `https://${AUTH0_DOMAIN}/`) {
-      throw new Error('Invalid token issuer');
-    }
-    
-    // Verify token audience
-    if (payload.aud !== AUTH0_AUDIENCE && !payload.aud.includes(AUTH0_AUDIENCE)) {
-      throw new Error('Invalid token audience');
-    }
-    
-    // Get signing key
-    const signingKey = await getSigningKey(header.kid);
-    
-    // Verify token signature
-    const verified = jwt.verify(token, signingKey, {
-      algorithms: ['RS256'],
-      issuer: `https://${AUTH0_DOMAIN}/`,
-      audience: AUTH0_AUDIENCE,
-    });
-    
-    return verified;
+    const decodedToken = await auth.verifyIdToken(token);
+    return decodedToken;
   } catch (error) {
     throw new Error(`Token verification failed: ${error.message}`);
   }
 };
 
-// Auth0 middleware
+// Get user profile from Firebase
+const getUserProfileFromFirebase = async (uid) => {
+  try {
+    const userRecord = await auth.getUser(uid);
+    return {
+      sub: userRecord.uid,
+      email: userRecord.email,
+      name: userRecord.displayName || userRecord.email,
+      picture: userRecord.photoURL,
+      email_verified: userRecord.emailVerified,
+      nickname: userRecord.displayName
+    };
+  } catch (error) {
+    throw new Error(`Failed to get user profile: ${error.message}`);
+  }
+};
+
+// Firebase middleware
 export const authenticateToken = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
@@ -80,14 +43,14 @@ export const authenticateToken = async (req, res, next) => {
       });
     }
     
-    // Verify the token
-    const decoded = await verifyToken(token);
+    // Verify the Firebase token
+    const decodedToken = await verifyToken(token);
 
-    // Fetch the full user profile from Auth0
-    const userProfile = await getUserProfileFromAuth0(token);
+    // Get user profile from Firebase
+    const userProfile = await getUserProfileFromFirebase(decodedToken.uid);
     
-    // Debug logging to see what we get from /userinfo
-    console.log('User profile from /userinfo endpoint:', userProfile);
+    // Debug logging
+    console.log('User profile from Firebase:', userProfile);
 
     // Add user info to request
     req.user = userProfile;
@@ -109,15 +72,9 @@ export const optionalAuth = async (req, res, next) => {
     const token = authHeader && authHeader.split(' ')[1];
     
     if (token) {
-      const decoded = await verifyToken(token);
-      req.user = {
-        sub: decoded.sub,
-        email: decoded.email,
-        name: decoded.name,
-        picture: decoded.picture,
-        email_verified: decoded.email_verified,
-        nickname: decoded.nickname
-      };
+      const decodedToken = await verifyToken(token);
+      const userProfile = await getUserProfileFromFirebase(decodedToken.uid);
+      req.user = userProfile;
     }
     
     next();
@@ -139,7 +96,7 @@ export const requireRole = (role) => {
     }
     
     // Check if user has the required role
-    // You can extend this to check custom claims or roles from Auth0
+    // You can extend this to check custom claims from Firebase
     if (req.user.role !== role) {
       return res.status(403).json({ 
         error: 'Insufficient permissions',

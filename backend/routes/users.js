@@ -12,9 +12,9 @@ router.get('/me', authenticateToken, async (req, res) => {
     console.log('GET /me - req.user:', req.user);
     console.log('GET /me - req.query.fallbackName:', req.query.fallbackName);
     
-    // Find or create user from Auth0 data
-    console.log('GET /me - Calling findOrCreateFromAuth0...');
-    const user = await User.findOrCreateFromAuth0(req.user, req.query.fallbackName);
+    // Find or create user from Firebase data
+    console.log('GET /me - Calling findOrCreateFromFirebase...');
+    const user = await User.findOrCreateFromFirebase(req.user, req.query.fallbackName);
     
     console.log('GET /me - User created/found:', user);
     
@@ -22,7 +22,7 @@ router.get('/me', authenticateToken, async (req, res) => {
       success: true,
       data: {
         id: user._id,
-        auth0Id: user.auth0Id,
+        firebaseUid: user.firebaseUid,
         email: user.email,
         name: user.name,
         picture: user.picture,
@@ -50,11 +50,11 @@ router.get('/me', authenticateToken, async (req, res) => {
       });
     }
     
-    if (error.message.includes('Missing Auth0 user ID')) {
+    if (error.message.includes('Missing Firebase user ID')) {
       return res.status(400).json({
         success: false,
-        error: 'INVALID_AUTH0_DATA',
-        message: 'Invalid Auth0 user data received'
+        error: 'INVALID_FIREBASE_DATA',
+        message: 'Invalid Firebase user data received'
       });
     }
     
@@ -87,7 +87,7 @@ router.put('/me', [
     }
 
     // Find user
-    const user = await User.findOne({ auth0Id: req.user.sub });
+    const user = await User.findOne({ firebaseUid: req.user.uid });
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -119,7 +119,7 @@ router.put('/me', [
       success: true,
       data: {
         id: user._id,
-        auth0Id: user.auth0Id,
+        firebaseUid: user.firebaseUid,
         email: user.email,
         name: user.name,
         picture: user.picture,
@@ -143,7 +143,7 @@ router.put('/me', [
 router.get('/me/accounts', authenticateToken, async (req, res) => {
   try {
     console.log('Fallback name param:', req.query.fallbackName);
-    const user = await User.findOrCreateFromAuth0(req.user, req.query.fallbackName);
+    const user = await User.findOrCreateFromFirebase(req.user, req.query.fallbackName);
     // Get user's league accounts with population
     const accounts = await user.populate('leagueAccounts');
     res.json({
@@ -170,7 +170,7 @@ router.get('/me/accounts', authenticateToken, async (req, res) => {
 // Get user statistics
 router.get('/me/stats', authenticateToken, async (req, res) => {
   try {
-    const user = await User.findOne({ auth0Id: req.user.sub });
+    const user = await User.findOne({ firebaseUid: req.user.uid });
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -212,7 +212,7 @@ router.get('/me/stats', authenticateToken, async (req, res) => {
 // Delete user account (hard delete, cascade league accounts, delete Auth0 user)
 router.delete('/me', authenticateToken, async (req, res) => {
   try {
-    const user = await User.findOne({ auth0Id: req.user.sub });
+    const user = await User.findOne({ firebaseUid: req.user.uid });
     if (!user) {
       return res.status(404).json({
         success: false,
