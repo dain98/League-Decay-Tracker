@@ -136,6 +136,9 @@ export const handleAPIError = (error) => {
       case 401:
         return 'Unauthorized: Please log in again';
       case 403:
+        if (data.error === 'Email not verified') {
+          return 'Email not verified: Please verify your email address before using this service';
+        }
         return 'Forbidden: You don\'t have permission to perform this action';
       case 404:
         return 'Not Found: The requested resource was not found';

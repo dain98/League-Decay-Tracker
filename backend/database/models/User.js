@@ -93,15 +93,6 @@ userSchema.statics.findOrCreateFromFirebase = async function(firebaseUser, fallb
 
     if (!user) {
       console.log('Creating new user...');
-      // Check for duplicate email
-      if (email) {
-        console.log('Checking for duplicate email:', email);
-        const existingEmailUser = await this.findOne({ email });
-        if (existingEmailUser) {
-          console.log('Duplicate email found:', existingEmailUser.firebaseUid);
-          throw new Error('DUPLICATE_EMAIL');
-        }
-      }
       // Create new user with Firebase data
       const userData = {
         firebaseUid: firebaseUid,
@@ -132,13 +123,6 @@ userSchema.statics.findOrCreateFromFirebase = async function(firebaseUser, fallb
     return user;
   } catch (error) {
     console.error('Error in findOrCreateFromFirebase:', error);
-    if (error.message === 'DUPLICATE_EMAIL') {
-      throw error;
-    }
-    // Handle MongoDB duplicate key error for email
-    if (error.code === 11000 && error.keyPattern && error.keyPattern.email) {
-      throw new Error('DUPLICATE_EMAIL');
-    }
     throw new Error(`Error finding or creating user: ${error.message}`);
   }
 };

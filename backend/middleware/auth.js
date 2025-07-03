@@ -49,6 +49,14 @@ export const authenticateToken = async (req, res, next) => {
     // Get user profile from Firebase
     const userProfile = await getUserProfileFromFirebase(decodedToken.uid);
     
+    // Check email verification
+    if (!userProfile.email_verified) {
+      return res.status(403).json({ 
+        error: 'Email not verified',
+        message: 'Please verify your email address before using this service'
+      });
+    }
+    
     // Debug logging
     console.log('User profile from Firebase:', userProfile);
 

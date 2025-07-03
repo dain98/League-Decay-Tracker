@@ -42,7 +42,7 @@ import GlobalDecayCountdown from './GlobalDecayCountdown';
 import UserMenu from './UserMenu';
 import Profile from './Profile';
 import { LoadingState, ErrorState, NoUserState, EmptyAccountsState } from './DashboardStates';
-import DuplicateEmailError from './DuplicateEmailError';
+import EmailNotVerified from './EmailNotVerified';
 
 // Styled components
 const DashboardContainer = styled(Container)(({ theme }) => ({
@@ -75,14 +75,14 @@ const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
-  const { logout } = useFirebaseAuth();
+  const { logout, user } = useFirebaseAuth();
   const { profile, loading: profileLoading, error: profileError, refresh: refreshProfile, apiClient } = useUserProfile();
   const [missingNameDialogOpen, setMissingNameDialogOpen] = useState(false);
   const [fallbackName, setFallbackName] = useState('');
   const [pendingLoad, setPendingLoad] = useState(false);
   const [userMenuAnchor, setUserMenuAnchor] = useState(null);
   const [showProfile, setShowProfile] = useState(false);
-  const [showDuplicateEmailError, setShowDuplicateEmailError] = useState(false);
+
 
   const loadData = async (fallbackNameParam) => {
     if (!apiClient) {
@@ -108,11 +108,7 @@ const Dashboard = () => {
         setIsLoading(false);
         return;
       }
-      if (error.response && error.response.data && error.response.data.error === 'DUPLICATE_EMAIL') {
-        setShowDuplicateEmailError(true);
-        setIsLoading(false);
-        return;
-      }
+
       setError(error.response?.data?.message || 'Failed to load accounts');
     } finally {
       setIsLoading(false);
@@ -330,15 +326,12 @@ const Dashboard = () => {
     }
   };
   
-  // Show duplicate email error page
-  if (showDuplicateEmailError) {
-    return <DuplicateEmailError />;
+  // Check for email verification
+  if (user && !user.emailVerified) {
+    return <EmailNotVerified />;
   }
   
-  // Check for DUPLICATE_EMAIL error in profile loading
-  if (profileError === 'DUPLICATE_EMAIL') {
-    return <DuplicateEmailError />;
-  }
+
   
   // Show loading state
   if (isLoading && accounts.length === 0) {
