@@ -13,45 +13,37 @@ const apiClient = axios.create({
   },
 });
 
-// Request interceptor to add auth token
-apiClient.interceptors.request.use(
-  (config) => {
-    // Get token from Auth0
-    const token = localStorage.getItem('auth0_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
 // Response interceptor to handle errors
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
       // Token expired or invalid, redirect to login
-      localStorage.removeItem('auth0_token');
+      // Let Auth0 handle the token refresh automatically
       window.location.href = '/login';
     }
     return Promise.reject(error);
   }
 );
 
-// Auth0 token management
+// Auth0 token management - simplified to use Auth0 SDK
 export const setAuthToken = (token) => {
-  localStorage.setItem('auth0_token', token);
+  // This function is kept for backward compatibility but should be avoided
+  // Auth0 SDK handles token management automatically
+  console.warn('setAuthToken is deprecated. Use Auth0 SDK for token management.');
 };
 
 export const getAuthToken = () => {
-  return localStorage.getItem('auth0_token');
+  // This function is kept for backward compatibility but should be avoided
+  // Auth0 SDK handles token management automatically
+  console.warn('getAuthToken is deprecated. Use Auth0 SDK for token management.');
+  return null;
 };
 
 export const clearAuthToken = () => {
-  localStorage.removeItem('auth0_token');
+  // This function is kept for backward compatibility but should be avoided
+  // Auth0 SDK handles token management automatically
+  console.warn('clearAuthToken is deprecated. Use Auth0 SDK for token management.');
 };
 
 // Health check

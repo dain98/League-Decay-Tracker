@@ -74,8 +74,8 @@ const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
-  const { logout, getAccessTokenSilently } = useAuth0();
-  const { profile, loading: profileLoading, error: profileError, refresh: refreshProfile } = useUserProfile();
+  const { logout } = useAuth0();
+  const { profile, loading: profileLoading, error: profileError, refresh: refreshProfile, apiClient } = useUserProfile();
   const [missingNameDialogOpen, setMissingNameDialogOpen] = useState(false);
   const [fallbackName, setFallbackName] = useState('');
   const [pendingLoad, setPendingLoad] = useState(false);
@@ -83,12 +83,15 @@ const Dashboard = () => {
   const [showProfile, setShowProfile] = useState(false);
 
   const loadData = async (fallbackNameParam) => {
+    if (!apiClient) {
+      setError('Not authenticated');
+      setIsLoading(false);
+      return;
+    }
+    
     try {
       setIsLoading(true);
       setError(null);
-      // Ensure we have the latest token
-      const token = await getAccessTokenSilently();
-      localStorage.setItem('auth0_token', token);
       // Load user's league accounts
       let url = '/users/me/accounts';
       if (fallbackNameParam) {
@@ -106,7 +109,7 @@ const Dashboard = () => {
         setError('An account with this email already exists. Please log in using your original provider.');
         return;
       }
-      setError(handleAPIError(error));
+      setError(error.response?.data?.message || 'Failed to load accounts');
     } finally {
       setIsLoading(false);
     }
@@ -116,16 +119,24 @@ const Dashboard = () => {
     if (profile && !missingNameDialogOpen && !pendingLoad) {
       loadData();
     }
-    // eslint-disable-next-line
-  }, [profile, getAccessTokenSilently]);
+  }, [profile, missingNameDialogOpen, pendingLoad]);
   
   const handleAddAccount = async (newAccount) => {
+    if (!apiClient) {
+      setSnackbar({
+        open: true,
+        message: 'Not authenticated',
+        severity: 'error'
+      });
+      return;
+    }
+    
     try {
       setIsLoading(true);
-      const response = await accountsAPI.add(newAccount);
+      const response = await apiClient.post('/accounts', newAccount);
       
       // Add the new account to the list
-      setAccounts(prevAccounts => [...prevAccounts, response.data]);
+      setAccounts(prevAccounts => [...prevAccounts, response.data.data]);
       setIsAddDialogOpen(false);
       setAccountToEdit(null);
       
@@ -139,7 +150,7 @@ const Dashboard = () => {
       console.error('Error adding account:', error);
       setSnackbar({
         open: true,
-        message: handleAPIError(error),
+        message: error.response?.data?.message || 'Failed to add account',
         severity: 'error'
       });
     } finally {
@@ -148,14 +159,23 @@ const Dashboard = () => {
   };
 
   const handleEditAccount = async (accountId, updatedAccount) => {
+    if (!apiClient) {
+      setSnackbar({
+        open: true,
+        message: 'Not authenticated',
+        severity: 'error'
+      });
+      return;
+    }
+    
     try {
       setIsLoading(true);
-      const response = await accountsAPI.update(accountId, updatedAccount);
+      const response = await apiClient.put(`/accounts/${accountId}`, updatedAccount);
       
       // Update the account in the list
       setAccounts(prevAccounts => 
         prevAccounts.map(account => 
-          account._id === accountId ? response.data : account
+          account._id === accountId ? response.data.data : account
         )
       );
       setIsAddDialogOpen(false);
@@ -171,7 +191,7 @@ const Dashboard = () => {
       console.error('Error updating account:', error);
       setSnackbar({
         open: true,
-        message: handleAPIError(error),
+        message: error.response?.data?.message || 'Failed to update account',
         severity: 'error'
       });
     } finally {
@@ -180,8 +200,17 @@ const Dashboard = () => {
   };
   
   const handleDeleteAccount = async (accountId) => {
+    if (!apiClient) {
+      setSnackbar({
+        open: true,
+        message: 'Not authenticated',
+        severity: 'error'
+      });
+      return;
+    }
+    
     try {
-      await accountsAPI.delete(accountId);
+      await apiClient.delete(`/accounts/${accountId}`);
       
       // Remove the account from the list
       setAccounts(prevAccounts => prevAccounts.filter(account => account._id !== accountId));
@@ -196,20 +225,29 @@ const Dashboard = () => {
       console.error('Error deleting account:', error);
       setSnackbar({
         open: true,
-        message: handleAPIError(error),
+        message: error.response?.data?.message || 'Failed to delete account',
         severity: 'error'
       });
     }
   };
 
   const handleRefreshAccount = async (accountId) => {
+    if (!apiClient) {
+      setSnackbar({
+        open: true,
+        message: 'Not authenticated',
+        severity: 'error'
+      });
+      return;
+    }
+    
     try {
-      const response = await accountsAPI.refresh(accountId);
+      const response = await apiClient.post(`/accounts/${accountId}/refresh`);
       
       // Update the account in the list
       setAccounts(prevAccounts => 
         prevAccounts.map(account => 
-          account._id === accountId ? response.data : account
+          account._id === accountId ? response.data.data : account
         )
       );
       
@@ -223,14 +261,13 @@ const Dashboard = () => {
       console.error('Error refreshing account:', error);
       setSnackbar({
         open: true,
-        message: handleAPIError(error),
+        message: error.response?.data?.message || 'Failed to refresh account',
         severity: 'error'
       });
     }
   };
   
   const handleLogout = () => {
-    clearAuthToken();
     logout({ logoutParams: { returnTo: window.location.origin + '/login' } });
   };
 

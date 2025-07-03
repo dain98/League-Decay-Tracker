@@ -4,25 +4,14 @@ import { Box, CircularProgress, Typography } from '@mui/material';
 import { useAuth0 } from '@auth0/auth0-react';
 
 const AuthGuard = ({ children }) => {
-  const { isAuthenticated, isLoading, error, getAccessTokenSilently } = useAuth0();
+  const { isAuthenticated, isLoading, error } = useAuth0();
 
   useEffect(() => {
     // Debug logging to help diagnose authentication issues
     console.log('AuthGuard - isAuthenticated:', isAuthenticated);
     console.log('AuthGuard - isLoading:', isLoading);
     console.log('AuthGuard - error:', error);
-    
-    // Try to get access token silently to trigger token refresh if needed
-    if (!isLoading && !isAuthenticated) {
-      getAccessTokenSilently({ ignoreCache: false })
-        .then(token => {
-          console.log('AuthGuard - Successfully got access token');
-        })
-        .catch(err => {
-          console.log('AuthGuard - Failed to get access token:', err);
-        });
-    }
-  }, [isAuthenticated, isLoading, error, getAccessTokenSilently]);
+  }, [isAuthenticated, isLoading, error]);
 
   // Show loading state while Auth0 is initializing
   if (isLoading) {

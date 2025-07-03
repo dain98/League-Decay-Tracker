@@ -2,7 +2,6 @@ import React from 'react';
 import { Box, Button, Typography, Paper } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useAuth0 } from '@auth0/auth0-react';
-import { setAuthToken } from '../services/api.js';
 
 // Styled components
 const PageContainer = styled(Box)({
@@ -40,33 +39,16 @@ const Auth0Button = styled(Button)(({ theme }) => ({
 }));
 
 const Login = () => {
-  const { loginWithRedirect, isAuthenticated, isLoading, getAccessTokenSilently } = useAuth0();
+  const { loginWithRedirect, isAuthenticated, isLoading } = useAuth0();
 
-  const handleAuth0Login = async () => {
-    try {
-      // Get the access token after login
-      const token = await getAccessTokenSilently();
-      setAuthToken(token);
-      loginWithRedirect();
-    } catch (error) {
-      console.error('Error getting access token:', error);
-      // Fallback to regular login if token retrieval fails
-      loginWithRedirect();
-    }
+  const handleAuth0Login = () => {
+    // Simply redirect to Auth0 login - token will be handled after redirect
+    loginWithRedirect();
   };
 
   // If already authenticated, redirect to dashboard
   if (isAuthenticated) {
-    // Ensure we have the token stored
-    getAccessTokenSilently()
-      .then(token => {
-        setAuthToken(token);
-        window.location.href = '/dashboard';
-      })
-      .catch(error => {
-        console.error('Error getting access token:', error);
-        window.location.href = '/dashboard';
-      });
+    window.location.href = '/dashboard';
     return null;
   }
 
