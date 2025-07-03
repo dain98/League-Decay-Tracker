@@ -105,10 +105,12 @@ const Dashboard = () => {
       if (error.response && error.response.data && error.response.data.error === 'MISSING_NAME') {
         setMissingNameDialogOpen(true);
         setPendingLoad(true);
+        setIsLoading(false);
         return;
       }
       if (error.response && error.response.data && error.response.data.error === 'DUPLICATE_EMAIL') {
         setShowDuplicateEmailError(true);
+        setIsLoading(false);
         return;
       }
       setError(error.response?.data?.message || 'Failed to load accounts');
