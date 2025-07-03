@@ -9,10 +9,10 @@ import {
   CircularProgress
 } from '@mui/material';
 import { Email, Refresh, Logout } from '@mui/icons-material';
-import { useAuth } from '../context/AuthContext';
+import { useFirebaseAuth } from '../context/FirebaseAuthContext';
 
 const EmailNotVerified = () => {
-  const { user, logout } = useAuth();
+  const { user, logout } = useFirebaseAuth();
   const [isResending, setIsResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
   const [resendError, setResendError] = useState('');
