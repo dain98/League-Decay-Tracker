@@ -68,11 +68,15 @@ userSchema.statics.findOrCreateFromAuth0 = async function(auth0User, fallbackNam
     
     // Handle both 'sub' and 'user_id' field names
     const auth0Id = auth0User.sub || auth0User.user_id;
+    console.log('Extracted auth0Id:', auth0Id);
+    
     if (!auth0Id) {
       throw new Error('Missing Auth0 user ID (sub or user_id)');
     }
     
+    console.log('Looking for existing user with auth0Id:', auth0Id);
     let user = await this.findOne({ auth0Id: auth0Id });
+    console.log('Existing user found:', user ? 'Yes' : 'No');
 
     // Robust extraction with fallback
     let name = auth0User.name || auth0User.nickname || auth0User.email || fallbackName || 'New User';
@@ -80,26 +84,43 @@ userSchema.statics.findOrCreateFromAuth0 = async function(auth0User, fallbackNam
     const picture = auth0User.picture;
     const emailVerified = auth0User.email_verified;
     const nickname = auth0User.nickname;
+    
+    console.log('Extracted user data:', {
+      name,
+      email,
+      picture,
+      emailVerified,
+      nickname
+    });
 
     if (!user) {
+      console.log('Creating new user...');
       // Check for duplicate email
       if (email) {
+        console.log('Checking for duplicate email:', email);
         const existingEmailUser = await this.findOne({ email });
         if (existingEmailUser) {
+          console.log('Duplicate email found:', existingEmailUser.auth0Id);
           throw new Error('DUPLICATE_EMAIL');
         }
       }
       // Create new user with Auth0 data
-      user = new this({
+      const userData = {
         auth0Id: auth0Id,
         email: email,
         name: name,
         picture: picture,
         emailVerified: emailVerified,
         nickname: nickname
-      });
+      };
+      console.log('Creating user with data:', userData);
+      
+      user = new this(userData);
+      console.log('User object created, saving...');
       await user.save();
+      console.log('User saved successfully');
     } else {
+      console.log('Updating existing user...');
       // Do NOT overwrite user-editable fields with Auth0 data
       // Optionally, update emailVerified if it changed
       if (typeof emailVerified === 'boolean' && user.emailVerified !== emailVerified) {
@@ -107,9 +128,12 @@ userSchema.statics.findOrCreateFromAuth0 = async function(auth0User, fallbackNam
       }
       user.updatedAt = new Date();
       await user.save();
+      console.log('User updated successfully');
     }
+    console.log('Returning user:', user._id);
     return user;
   } catch (error) {
+    console.error('Error in findOrCreateFromAuth0:', error);
     if (error.message === 'DUPLICATE_EMAIL') {
       throw error;
     }

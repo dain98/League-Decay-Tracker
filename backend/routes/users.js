@@ -9,10 +9,16 @@ const router = express.Router();
 // Get current user profile
 router.get('/me', authenticateToken, async (req, res) => {
   try {
+    console.log('GET /me - req.user:', req.user);
+    console.log('GET /me - req.query.fallbackName:', req.query.fallbackName);
+    
     // Find or create user from Auth0 data
+    console.log('GET /me - Calling findOrCreateFromAuth0...');
     const user = await User.findOrCreateFromAuth0(req.user, req.query.fallbackName);
     
-    res.json({
+    console.log('GET /me - User created/found:', user);
+    
+    const responseData = {
       success: true,
       data: {
         id: user._id,
@@ -25,8 +31,17 @@ router.get('/me', authenticateToken, async (req, res) => {
         createdAt: user.createdAt,
         updatedAt: user.updatedAt
       }
-    });
+    };
+    
+    console.log('GET /me - Sending response:', responseData);
+    res.json(responseData);
   } catch (error) {
+    console.error('GET /me - Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    
     if (error.message === 'DUPLICATE_EMAIL') {
       return res.status(400).json({
         success: false,
@@ -34,6 +49,15 @@ router.get('/me', authenticateToken, async (req, res) => {
         message: 'An account with this email already exists. Please log in using your original provider.'
       });
     }
+    
+    if (error.message.includes('Missing Auth0 user ID')) {
+      return res.status(400).json({
+        success: false,
+        error: 'INVALID_AUTH0_DATA',
+        message: 'Invalid Auth0 user data received'
+      });
+    }
+    
     console.error('Error getting user profile:', error);
     res.status(500).json({
       success: false,
