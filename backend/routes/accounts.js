@@ -10,7 +10,7 @@ const router = express.Router();
 // Get all league accounts for current user
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const user = await User.findOne({ auth0Id: req.user.sub });
+    const user = await User.findOne({ firebaseUid: req.user.sub });
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -49,7 +49,7 @@ router.get('/:id', [
       });
     }
 
-    const user = await User.findOne({ auth0Id: req.user.sub });
+    const user = await User.findOne({ firebaseUid: req.user.sub });
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -123,7 +123,7 @@ router.post('/', [
       });
     }
 
-    const user = await User.findOne({ auth0Id: req.user.sub });
+    const user = await User.findOne({ firebaseUid: req.user.sub });
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -260,7 +260,7 @@ router.put('/:id', [
       });
     }
 
-    const user = await User.findOne({ auth0Id: req.user.sub });
+    const user = await User.findOne({ firebaseUid: req.user.sub });
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -322,7 +322,7 @@ router.delete('/:id', [
       });
     }
 
-    const user = await User.findOne({ auth0Id: req.user.sub });
+    const user = await User.findOne({ firebaseUid: req.user.sub });
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -374,7 +374,7 @@ router.post('/:id/refresh', [
       });
     }
 
-    const user = await User.findOne({ auth0Id: req.user.sub });
+    const user = await User.findOne({ firebaseUid: req.user.sub });
     if (!user) {
       return res.status(404).json({
         success: false,
