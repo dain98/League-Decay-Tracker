@@ -5,6 +5,7 @@ import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import AuthGuard from './components/AuthGuard';
+import DuplicateEmailError from './components/DuplicateEmailError';
 import { useDataDragon } from './hooks/useDataDragon.js';
 import './App.css';
 
@@ -64,6 +65,7 @@ function App() {
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/duplicate-email" element={<DuplicateEmailError />} />
           <Route 
             path="/dashboard" 
             element={
