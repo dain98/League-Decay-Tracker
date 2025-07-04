@@ -4,7 +4,7 @@ import { Box, CircularProgress, Typography } from '@mui/material';
 import { useFirebaseAuth } from '../context/FirebaseAuthContext';
 
 const AuthGuard = ({ children }) => {
-  const { isAuthenticated, loading, error } = useFirebaseAuth();
+  const { isAuthenticated, loading, error, user } = useFirebaseAuth();
 
   useEffect(() => {
     // Debug logging to help diagnose authentication issues
@@ -58,7 +58,13 @@ const AuthGuard = ({ children }) => {
     return <Navigate to="/login" replace />;
   }
 
-  console.log('AuthGuard - User authenticated, rendering children');
+  // Check if email is verified
+  if (user && !user.emailVerified) {
+    console.log('AuthGuard - User email not verified, redirecting to email verification');
+    return <Navigate to="/verify-email" replace />;
+  }
+
+  console.log('AuthGuard - User authenticated and email verified, rendering children');
   return children;
 };
 

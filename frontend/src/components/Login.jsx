@@ -77,11 +77,13 @@ const Login = () => {
     try {
       if (isSignUp) {
         await signUp(email, password, displayName);
+        // For signup, don't redirect - let the AuthGuard handle the flow
+        // The user will be redirected to EmailNotVerified component if email is not verified
       } else {
         await signIn(email, password);
+        // Redirect to dashboard on sign in success
+        window.location.href = '/dashboard';
       }
-      // Redirect to dashboard on success
-      window.location.href = '/dashboard';
     } catch (error) {
       console.error('Authentication error:', error);
     } finally {

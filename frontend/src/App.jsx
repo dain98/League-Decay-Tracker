@@ -6,6 +6,7 @@ import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import AuthGuard from './components/AuthGuard';
 import DuplicateEmailError from './components/DuplicateEmailError';
+import EmailNotVerified from './components/EmailNotVerified';
 import { useDataDragon } from './hooks/useDataDragon.js';
 import TermsOfService from './components/TermsOfService';
 import PrivacyPolicy from './components/PrivacyPolicy';
@@ -70,6 +71,7 @@ function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/duplicate-email" element={<DuplicateEmailError />} />
+            <Route path="/verify-email" element={<EmailNotVerified />} />
             <Route path="/terms" element={<TermsOfService />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route 

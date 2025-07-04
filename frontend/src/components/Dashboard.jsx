@@ -42,7 +42,6 @@ import GlobalDecayCountdown from './GlobalDecayCountdown';
 import UserMenu from './UserMenu';
 import Profile from './Profile';
 import { LoadingState, ErrorState, NoUserState, EmptyAccountsState } from './DashboardStates';
-import EmailNotVerified from './EmailNotVerified';
 
 // Styled components
 const DashboardContainer = styled(Container)(({ theme }) => ({
@@ -332,10 +331,7 @@ const Dashboard = () => {
     }
   };
   
-  // Check for email verification
-  if (user && !user.emailVerified) {
-    return <EmailNotVerified />;
-  }
+
   
 
   
