@@ -92,17 +92,24 @@ const Profile = ({ onClose }) => {
     setEmailSuccess('');
 
     try {
-      // For Firebase email changes, we need to handle this differently
-      // The user needs to be recently authenticated and the email needs to be verified
+      // Check if user is OAuth-only (no password)
+      const isOAuthOnly = !hasPassword;
       
-      // First, let's try to update the email directly
-      await updateEmail(user, emailData.newEmail);
-      
-      // If successful, update the backend profile
-      await updateProfile({ email: emailData.newEmail });
-      
-      setEmailSuccess('Email updated successfully! Please check your inbox for a verification email.');
-      setEmailData({ newEmail: '' });
+      if (isOAuthOnly) {
+        // For OAuth users, we can't change email through Firebase
+        // Instead, we'll update the backend profile and inform the user
+        await updateProfile({ email: emailData.newEmail });
+        
+        setEmailSuccess('Email updated in your profile! Note: For OAuth accounts, the email change is only reflected in this app. Your Google/Twitter account email remains unchanged.');
+        setEmailData({ newEmail: '' });
+      } else {
+        // For email/password users, try Firebase email change
+        await updateEmail(user, emailData.newEmail);
+        await updateProfile({ email: emailData.newEmail });
+        
+        setEmailSuccess('Email updated successfully! Please check your inbox for a verification email.');
+        setEmailData({ newEmail: '' });
+      }
       
     } catch (error) {
       console.error('Error updating email:', error);
@@ -116,7 +123,7 @@ const Profile = ({ onClose }) => {
           errorMessage = 'Please enter a valid email address';
           break;
         case 'auth/operation-not-allowed':
-          errorMessage = 'Email change requires recent authentication. Please log out and log back in, then try again.';
+          errorMessage = 'Email change not allowed for OAuth accounts. The email will be updated in your profile only.';
           break;
         case 'auth/requires-recent-login':
           errorMessage = 'For security reasons, please log out and log back in before changing your email.';
