@@ -816,4 +816,47 @@ router.post('/decay/check-matches', [
   }
 });
 
+// Test endpoint to verify Firebase configuration
+router.get('/test-firebase', async (req, res) => {
+  try {
+    // Check if Firebase environment variables are set
+    const requiredVars = [
+      'FIREBASE_TYPE',
+      'FIREBASE_PROJECT_ID', 
+      'FIREBASE_PRIVATE_KEY_ID',
+      'FIREBASE_PRIVATE_KEY',
+      'FIREBASE_CLIENT_EMAIL',
+      'FIREBASE_CLIENT_ID'
+    ];
+    
+    const missingVars = requiredVars.filter(varName => !process.env[varName]);
+    
+    if (missingVars.length > 0) {
+      return res.status(500).json({
+        success: false,
+        error: 'Missing Firebase environment variables',
+        missing: missingVars
+      });
+    }
+    
+    // Test Firebase connection
+    const auth = (await import('../config/firebase.js')).auth;
+    
+    res.json({
+      success: true,
+      message: 'Firebase configuration is valid',
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL
+    });
+    
+  } catch (error) {
+    console.error('Firebase test error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Firebase configuration error',
+      message: error.message
+    });
+  }
+});
+
 export default router; 
