@@ -77,11 +77,17 @@ export const UserProfileProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
-      // For now, just update the local profile
-      // In a real app, you might want to update Firebase user profile too
-      const updatedProfile = { ...profile, ...updateData };
-      setProfile(updatedProfile);
-      return { success: true, data: updatedProfile };
+      // Call backend API to update profile
+      const response = await apiClient.put('/users/me', updateData);
+      
+      if (response.data.success) {
+        // Update local profile with response data
+        const updatedProfile = { ...profile, ...response.data.data };
+        setProfile(updatedProfile);
+        return { success: true, data: updatedProfile };
+      } else {
+        throw new Error(response.data.message || 'Failed to update profile');
+      }
     } catch (err) {
       const errMsg = err.response?.data?.message || 'Failed to update user profile';
       setError(errMsg);
