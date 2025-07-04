@@ -293,6 +293,11 @@ const Dashboard = () => {
     setShowProfile(false);
   };
 
+  const handleTitleClick = () => {
+    // Refresh the dashboard data
+    loadData();
+  };
+
   const getMostUrgentAccount = () => {
     return accounts.reduce((urgent, account) => {
       // If current account is immune (-1), it should be shown if no other urgent account exists
@@ -364,7 +369,18 @@ const Dashboard = () => {
     <>
       <AppBar position="fixed">
         <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+          <Typography 
+            variant="h6" 
+            component="div" 
+            sx={{ 
+              flexGrow: 1, 
+              cursor: 'pointer',
+              '&:hover': {
+                opacity: 0.8
+              }
+            }}
+            onClick={handleTitleClick}
+          >
             LoL Decay Tracker
           </Typography>
           
