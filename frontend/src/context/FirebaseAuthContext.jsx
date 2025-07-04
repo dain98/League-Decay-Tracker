@@ -38,7 +38,19 @@ export const FirebaseAuthProvider = ({ children }) => {
       }
       
       // Send email verification
-      await sendEmailVerification(userCredential.user);
+      console.log('Sending email verification to:', userCredential.user.email);
+      try {
+        await sendEmailVerification(userCredential.user);
+        console.log('Email verification sent successfully');
+      } catch (emailError) {
+        console.error('Error sending email verification:', emailError);
+        // Don't throw the error - the user was created successfully
+        // Just log it for debugging
+      }
+      
+      // TODO: Remove this in production - this is for development only
+      // In development, you can uncomment the next line to auto-verify emails
+      // await userCredential.user.reload();
       
       return userCredential.user;
     } catch (error) {
@@ -143,7 +155,15 @@ export const FirebaseAuthProvider = ({ children }) => {
     if (!user) {
       throw new Error('No user is signed in');
     }
-    return await sendEmailVerification(user);
+    console.log('Resending email verification to:', user.email);
+    try {
+      const result = await sendEmailVerification(user);
+      console.log('Email verification resent successfully');
+      return result;
+    } catch (error) {
+      console.error('Error resending email verification:', error);
+      throw error;
+    }
   };
 
   // Listen for auth state changes

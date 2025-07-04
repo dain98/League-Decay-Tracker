@@ -58,13 +58,7 @@ const AuthGuard = ({ children }) => {
     return <Navigate to="/login" replace />;
   }
 
-  // Check if email is verified
-  if (user && !user.emailVerified) {
-    console.log('AuthGuard - User email not verified, redirecting to email verification');
-    return <Navigate to="/verify-email" replace />;
-  }
-
-  console.log('AuthGuard - User authenticated and email verified, rendering children');
+  console.log('AuthGuard - User authenticated, rendering children');
   return children;
 };
 

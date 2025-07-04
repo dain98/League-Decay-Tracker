@@ -2,6 +2,7 @@
 export { default as connectDB, testConnection } from './connection.js';
 export { default as User } from './models/User.js';
 export { default as LeagueAccount } from './models/LeagueAccount.js';
+export { default as UserLeagueAccount } from './models/UserLeagueAccount.js';
 
 // Database utilities
 export const dbStatus = {

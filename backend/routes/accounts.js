@@ -2,7 +2,7 @@ import express from 'express';
 import { body, param, validationResult } from 'express-validator';
 import { authenticateToken } from '../middleware/auth.js';
 import { authenticateApiKey } from '../middleware/apiKey.js';
-import { User, LeagueAccount } from '../database/index.js';
+import { User, LeagueAccount, UserLeagueAccount } from '../database/index.js';
 import { getRiotAccountInfo, getSummonerInfo, getRiotRankInfo, getRankedSoloDuoMatchHistory, processAccountMatchHistory } from '../services/riotApi.js';
 
 const router = express.Router();
@@ -10,6 +10,7 @@ const router = express.Router();
 // Get all league accounts for current user
 router.get('/', authenticateToken, async (req, res) => {
   try {
+    console.log('--- /users/me/accounts route hit ---');
     const user = await User.findOne({ firebaseUid: req.user.sub });
     if (!user) {
       return res.status(404).json({
@@ -18,7 +19,38 @@ router.get('/', authenticateToken, async (req, res) => {
       });
     }
 
-    const accounts = await LeagueAccount.findByUserId(user._id);
+    console.log('About to call UserLeagueAccount.findByUserId with:', user._id);
+    const userAccounts = await UserLeagueAccount.findByUserId(user._id);
+    console.log('GET /users/me/accounts - userAccounts:', userAccounts);
+    
+    // Transform the data to match the expected format
+    const accounts = userAccounts.map(userAccount => {
+      const leagueAccount = userAccount.leagueAccountId;
+      return {
+        _id: userAccount._id,
+        userId: userAccount.userId,
+        puuid: leagueAccount.puuid,
+        gameName: leagueAccount.gameName,
+        tagLine: leagueAccount.tagLine,
+        region: leagueAccount.region,
+        summonerIcon: leagueAccount.summonerIcon,
+        summonerLevel: leagueAccount.summonerLevel,
+        tier: leagueAccount.tier,
+        division: leagueAccount.division,
+        lp: leagueAccount.lp,
+        lastSoloDuoGameId: leagueAccount.lastSoloDuoGameId,
+        remainingDecayDays: userAccount.remainingDecayDays,
+        isActive: userAccount.isActive,
+        isDecaying: userAccount.isDecaying,
+        isSpecial: userAccount.isSpecial,
+        lastUpdated: userAccount.lastUpdated,
+        createdAt: userAccount.createdAt,
+        // Add virtuals
+        riotId: leagueAccount.riotId,
+        rankDisplay: leagueAccount.rankDisplay,
+        decayStatus: userAccount.decayStatus
+      };
+    });
     
     res.json({
       success: true,
@@ -57,12 +89,12 @@ router.get('/:id', [
       });
     }
 
-    const account = await LeagueAccount.findOne({
+    const userAccount = await UserLeagueAccount.findOne({
       _id: req.params.id,
       userId: user._id
-    }).populate('userId', 'name email');
+    }).populate('leagueAccountId');
 
-    if (!account) {
+    if (!userAccount) {
       return res.status(404).json({
         success: false,
         error: 'League account not found'
@@ -72,11 +104,37 @@ router.get('/:id', [
     // Process match history and update decay if needed
     let matchHistoryResult = null;
     try {
-      matchHistoryResult = await processAccountMatchHistory(account);
+      matchHistoryResult = await processAccountMatchHistory(userAccount.leagueAccountId, userAccount);
     } catch (matchError) {
       console.warn('Could not process match history for account:', matchError.message);
       // Continue without match history processing
     }
+
+    // Transform the data to match the expected format
+    const account = {
+      _id: userAccount._id,
+      userId: userAccount.userId,
+      puuid: userAccount.leagueAccountId.puuid,
+      gameName: userAccount.leagueAccountId.gameName,
+      tagLine: userAccount.leagueAccountId.tagLine,
+      region: userAccount.leagueAccountId.region,
+      summonerIcon: userAccount.leagueAccountId.summonerIcon,
+      summonerLevel: userAccount.leagueAccountId.summonerLevel,
+      tier: userAccount.leagueAccountId.tier,
+      division: userAccount.leagueAccountId.division,
+      lp: userAccount.leagueAccountId.lp,
+      lastSoloDuoGameId: userAccount.leagueAccountId.lastSoloDuoGameId,
+      remainingDecayDays: userAccount.remainingDecayDays,
+      isActive: userAccount.isActive,
+      isDecaying: userAccount.isDecaying,
+      isSpecial: userAccount.isSpecial,
+      lastUpdated: userAccount.lastUpdated,
+      createdAt: userAccount.createdAt,
+      // Add virtuals
+      riotId: userAccount.leagueAccountId.riotId,
+      rankDisplay: userAccount.leagueAccountId.rankDisplay,
+      decayStatus: userAccount.decayStatus
+    };
 
     res.json({
       success: true,
@@ -133,15 +191,15 @@ router.post('/', [
 
     const { gameName, tagLine, region, remainingDecayDays, isSpecial, isDecaying } = req.body;
 
-    // Check if account already exists for this user
-    const existingAccount = await LeagueAccount.findOne({
+    // Check if user already has this account
+    const existingUserAccount = await UserLeagueAccount.findOne({
       userId: user._id,
-      gameName: gameName,
-      tagLine: tagLine,
-      region: region
-    });
+      'leagueAccountId.gameName': gameName,
+      'leagueAccountId.tagLine': tagLine,
+      'leagueAccountId.region': region.toUpperCase()
+    }).populate('leagueAccountId');
 
-    if (existingAccount) {
+    if (existingUserAccount) {
       return res.status(409).json({
         success: false,
         error: 'Account already exists',
@@ -171,38 +229,79 @@ router.post('/', [
         // Continue without latest game ID - it will be set on first refresh
       }
 
-      // Create new league account
-      const newAccount = new LeagueAccount({
-        userId: user._id,
+      // Prepare Riot data for the shared account
+      const riotData = {
         puuid: riotAccountInfo.puuid,
         summonerIcon: summonerInfo.profileIconId || 0,
-        gameName: gameName,
-        tagLine: tagLine,
-        region: region,
         summonerLevel: summonerInfo.summonerLevel || 1,
         tier: rankInfo.tier || null,
         division: rankInfo.division || null,
         lp: rankInfo.lp || 0,
+        lastSoloDuoGameId: latestGameId || 'NO_GAMES_YET'
+      };
+
+      // Find or create the shared league account
+      const leagueAccount = await LeagueAccount.findOrCreateByRiotId(
+        gameName, 
+        tagLine, 
+        region, 
+        riotData
+      );
+
+      // Create user's relationship to this account
+      const userLeagueAccount = new UserLeagueAccount({
+        userId: user._id,
+        leagueAccountId: leagueAccount._id,
         remainingDecayDays: Number(remainingDecayDays),
         isSpecial: isSpecial === true || isSpecial === 'true' || isSpecial === 'on',
-        isDecaying: isDecaying === true || isDecaying === 'true' || isDecaying === 'on',
-        lastSoloDuoGameId: latestGameId || 'NO_GAMES_YET'
+        isDecaying: isDecaying === true || isDecaying === 'true' || isDecaying === 'on'
       });
 
-      await newAccount.save();
+      await userLeagueAccount.save();
 
       // Process match history for the new account to ensure accurate decay tracking
       let matchHistoryResult = null;
       try {
-        matchHistoryResult = await processAccountMatchHistory(newAccount);
+        matchHistoryResult = await processAccountMatchHistory(leagueAccount, userLeagueAccount);
       } catch (matchError) {
         console.warn('Could not process match history for new account:', matchError.message);
         // Continue without match history processing
       }
 
+      // Populate the league account data for the response
+      const populatedUserAccount = await UserLeagueAccount.findById(userLeagueAccount._id)
+        .populate('leagueAccountId');
+
+      // Transform to flattened account shape
+      const newLeagueAccount = populatedUserAccount.leagueAccountId;
+      const account = {
+        _id: populatedUserAccount._id,
+        userId: populatedUserAccount.userId,
+        puuid: newLeagueAccount.puuid,
+        gameName: newLeagueAccount.gameName,
+        tagLine: newLeagueAccount.tagLine,
+        region: newLeagueAccount.region,
+        summonerIcon: newLeagueAccount.summonerIcon,
+        summonerLevel: newLeagueAccount.summonerLevel,
+        tier: newLeagueAccount.tier,
+        division: newLeagueAccount.division,
+        lp: newLeagueAccount.lp,
+        lastSoloDuoGameId: newLeagueAccount.lastSoloDuoGameId,
+        remainingDecayDays: populatedUserAccount.remainingDecayDays,
+        isActive: populatedUserAccount.isActive,
+        isDecaying: populatedUserAccount.isDecaying,
+        isSpecial: populatedUserAccount.isSpecial,
+        lastUpdated: populatedUserAccount.lastUpdated,
+        createdAt: populatedUserAccount.createdAt,
+        // Add virtuals
+        riotId: newLeagueAccount.riotId,
+        rankDisplay: newLeagueAccount.rankDisplay,
+        decayStatus: populatedUserAccount.decayStatus
+      };
+
       res.status(201).json({
         success: true,
-        data: newAccount,
+        data: account,
         matchHistory: matchHistoryResult,
         message: 'League account added successfully'
       });
@@ -255,28 +354,52 @@ router.put('/:id', [
       });
     }
 
-    const account = await LeagueAccount.findOne({
+    const userAccount = await UserLeagueAccount.findOne({
       _id: req.params.id,
       userId: user._id
-    });
+    }).populate('leagueAccountId');
 
-    if (!account) {
+    if (!userAccount) {
       return res.status(404).json({
         success: false,
         error: 'League account not found'
       });
     }
 
-    // Update allowed fields
-    const { isActive, gameName, tagLine, remainingDecayDays, isSpecial, isDecaying } = req.body;
-    if (typeof isActive === 'boolean') account.isActive = isActive;
-    if (gameName) account.gameName = gameName;
-    if (tagLine) account.tagLine = tagLine;
-    if (typeof remainingDecayDays === 'number') account.remainingDecayDays = remainingDecayDays;
-    if (typeof isSpecial === 'boolean') account.isSpecial = isSpecial;
-    if (typeof isDecaying === 'boolean') account.isDecaying = isDecaying;
+    // Update allowed fields (only user-specific fields)
+    const { isActive, remainingDecayDays, isSpecial, isDecaying } = req.body;
+    if (typeof isActive === 'boolean') userAccount.isActive = isActive;
+    if (typeof remainingDecayDays === 'number') userAccount.remainingDecayDays = remainingDecayDays;
+    if (typeof isSpecial === 'boolean') userAccount.isSpecial = isSpecial;
+    if (typeof isDecaying === 'boolean') userAccount.isDecaying = isDecaying;
 
-    await account.save();
+    await userAccount.save();
+
+    // Transform the data to match the expected format
+    const account = {
+      _id: userAccount._id,
+      userId: userAccount.userId,
+      puuid: userAccount.leagueAccountId.puuid,
+      gameName: userAccount.leagueAccountId.gameName,
+      tagLine: userAccount.leagueAccountId.tagLine,
+      region: userAccount.leagueAccountId.region,
+      summonerIcon: userAccount.leagueAccountId.summonerIcon,
+      summonerLevel: userAccount.leagueAccountId.summonerLevel,
+      tier: userAccount.leagueAccountId.tier,
+      division: userAccount.leagueAccountId.division,
+      lp: userAccount.leagueAccountId.lp,
+      lastSoloDuoGameId: userAccount.leagueAccountId.lastSoloDuoGameId,
+      remainingDecayDays: userAccount.remainingDecayDays,
+      isActive: userAccount.isActive,
+      isDecaying: userAccount.isDecaying,
+      isSpecial: userAccount.isSpecial,
+      lastUpdated: userAccount.lastUpdated,
+      createdAt: userAccount.createdAt,
+      // Add virtuals
+      riotId: userAccount.leagueAccountId.riotId,
+      rankDisplay: userAccount.leagueAccountId.rankDisplay,
+      decayStatus: userAccount.decayStatus
+    };
 
     res.json({
       success: true,
@@ -317,19 +440,19 @@ router.delete('/:id', [
       });
     }
 
-    const account = await LeagueAccount.findOne({
+    const userAccount = await UserLeagueAccount.findOne({
       _id: req.params.id,
       userId: user._id
     });
 
-    if (!account) {
+    if (!userAccount) {
       return res.status(404).json({
         success: false,
         error: 'League account not found'
       });
     }
 
-    await LeagueAccount.findByIdAndDelete(req.params.id);
+    await UserLeagueAccount.findByIdAndDelete(req.params.id);
 
     res.json({
       success: true,
@@ -369,12 +492,12 @@ router.post('/:id/refresh', [
       });
     }
 
-    const account = await LeagueAccount.findOne({
+    const userAccount = await UserLeagueAccount.findOne({
       _id: req.params.id,
       userId: user._id
-    });
+    }).populate('leagueAccountId');
 
-    if (!account) {
+    if (!userAccount) {
       return res.status(404).json({
         success: false,
         error: 'League account not found'
@@ -383,7 +506,33 @@ router.post('/:id/refresh', [
 
     // Refresh data from Riot API and process match history
     try {
-      const result = await processAccountMatchHistory(account);
+      const result = await processAccountMatchHistory(userAccount.leagueAccountId, userAccount);
+      
+      // Transform the data to match the expected format
+      const account = {
+        _id: userAccount._id,
+        userId: userAccount.userId,
+        puuid: userAccount.leagueAccountId.puuid,
+        gameName: userAccount.leagueAccountId.gameName,
+        tagLine: userAccount.leagueAccountId.tagLine,
+        region: userAccount.leagueAccountId.region,
+        summonerIcon: userAccount.leagueAccountId.summonerIcon,
+        summonerLevel: userAccount.leagueAccountId.summonerLevel,
+        tier: userAccount.leagueAccountId.tier,
+        division: userAccount.leagueAccountId.division,
+        lp: userAccount.leagueAccountId.lp,
+        lastSoloDuoGameId: userAccount.leagueAccountId.lastSoloDuoGameId,
+        remainingDecayDays: userAccount.remainingDecayDays,
+        isActive: userAccount.isActive,
+        isDecaying: userAccount.isDecaying,
+        isSpecial: userAccount.isSpecial,
+        lastUpdated: userAccount.lastUpdated,
+        createdAt: userAccount.createdAt,
+        // Add virtuals
+        riotId: userAccount.leagueAccountId.riotId,
+        rankDisplay: userAccount.leagueAccountId.rankDisplay,
+        decayStatus: userAccount.decayStatus
+      };
       
       res.json({
         success: true,
@@ -418,24 +567,31 @@ router.post('/decay/process', [
   try {
     const { region } = req.body;
 
-    // Build query for diamond+ accounts
-    const query = {
+    // 1. Find all LeagueAccount IDs in the region and tier
+    const leagueAccountQuery = {
       tier: { $in: ['DIAMOND', 'MASTER', 'GRANDMASTER', 'CHALLENGER'] },
       isActive: true
     };
-
-    // Add region filter if provided
+    
     if (region) {
-      query.region = region;
+      leagueAccountQuery.region = region.toUpperCase();
       console.log(`🌍 Processing decay for region: ${region}`);
     } else {
       console.log('🌍 Processing decay for all regions');
     }
+    
+    const leagueAccounts = await LeagueAccount.find(leagueAccountQuery).select('_id');
+    const leagueAccountIds = leagueAccounts.map(acc => acc._id);
 
-    // Find all accounts that are diamond and above
-    const diamondPlusAccounts = await LeagueAccount.find(query);
+    // 2. Find all UserLeagueAccounts linked to those LeagueAccounts
+    const userAccountQuery = {
+      leagueAccountId: { $in: leagueAccountIds },
+      isActive: true
+    };
+    
+    const diamondPlusUserAccounts = await UserLeagueAccount.find(userAccountQuery).populate('leagueAccountId');
 
-    if (diamondPlusAccounts.length === 0) {
+    if (diamondPlusUserAccounts.length === 0) {
       const regionMessage = region ? ` for region ${region}` : '';
       return res.json({
         success: true,
@@ -452,44 +608,45 @@ router.post('/decay/process', [
     const errors = [];
 
     // Process each account
-    for (const account of diamondPlusAccounts) {
+    for (const userAccount of diamondPlusUserAccounts) {
+      const account = userAccount.leagueAccountId;
       try {
         // Skip accounts that are immune (decay days = -1)
-        if (account.remainingDecayDays === -1) {
+        if (userAccount.remainingDecayDays === -1) {
           console.log(`🛡️  ${account.riotId} is immune to decay (decay days: -1) - skipping`);
           continue;
         }
         
-        if (account.remainingDecayDays > 0) {
+        if (userAccount.remainingDecayDays > 0) {
           // Account still has decay days - reduce by 1
-          account.remainingDecayDays -= 1;
+          userAccount.remainingDecayDays -= 1;
           
           // Set isDecaying flag if account reaches 0 decay days
-          if (account.remainingDecayDays === 0) {
-            account.isDecaying = true;
+          if (userAccount.remainingDecayDays === 0) {
+            userAccount.isDecaying = true;
             console.log(`🔄 ${account.riotId} has 0 decay days left - setting isDecaying flag`);
           }
           
-          await account.save();
+          await userAccount.save();
           
           processedAccounts.push({
-            id: account._id,
+            id: userAccount._id,
             riotId: account.riotId,
             tier: account.tier,
             division: account.division,
-            previousDecayDays: account.remainingDecayDays + 1,
-            currentDecayDays: account.remainingDecayDays,
-            isDecaying: account.isDecaying
+            previousDecayDays: userAccount.remainingDecayDays + 1,
+            currentDecayDays: userAccount.remainingDecayDays,
+            isDecaying: userAccount.isDecaying
           });
-        } else if (account.remainingDecayDays === 0 && !account.isDecaying) {
+        } else if (userAccount.remainingDecayDays === 0 && !userAccount.isDecaying) {
           // Account has 0 decay days but flag not set - set it now
-          account.isDecaying = true;
-          await account.save();
+          userAccount.isDecaying = true;
+          await userAccount.save();
           
           console.log(`🔄 ${account.riotId} already has 0 decay days - setting isDecaying flag`);
           
           processedAccounts.push({
-            id: account._id,
+            id: userAccount._id,
             riotId: account.riotId,
             tier: account.tier,
             division: account.division,
@@ -498,23 +655,23 @@ router.post('/decay/process', [
             isDecaying: true,
             alreadyDecaying: true
           });
-        } else if (account.remainingDecayDays === 0 && account.isDecaying) {
+        } else if (userAccount.remainingDecayDays === 0 && userAccount.isDecaying) {
           // Account has 0 decay days and isDecaying flag is set
           // Check if Master+ account with LP < 75 should reset to 28 days
           if ((account.tier === 'MASTER' || account.tier === 'GRANDMASTER' || account.tier === 'CHALLENGER') && 
               account.lp < 75) {
             
-            const previousDecayDays = account.remainingDecayDays;
-            account.remainingDecayDays = 28;
-            account.isDecaying = false;
-            account.isSpecial = true; // Set special flag for this decay case
+            const previousDecayDays = userAccount.remainingDecayDays;
+            userAccount.remainingDecayDays = 28;
+            userAccount.isDecaying = false;
+            userAccount.isSpecial = true; // Set special flag for this decay case
             
-            await account.save();
+            await userAccount.save();
             
             console.log(`🔄 ${account.riotId} (${account.tier} ${account.lp}LP) decayed back to Diamond - reset to 28 days, set isSpecial flag`);
             
             processedAccounts.push({
-              id: account._id,
+              id: userAccount._id,
               riotId: account.riotId,
               tier: account.tier,
               division: account.division,
@@ -529,9 +686,9 @@ router.post('/decay/process', [
           // If not Master+ or LP >= 75, skip processing (already decaying)
         }
       } catch (accountError) {
-        console.error(`Error processing decay for account ${account._id}:`, accountError);
+        console.error(`Error processing decay for account ${userAccount._id}:`, accountError);
         errors.push({
-          accountId: account._id,
+          accountId: userAccount._id,
           riotId: account.riotId,
           error: accountError.message
         });
@@ -544,7 +701,7 @@ router.post('/decay/process', [
       message: `Decay processed for ${processedAccounts.length} accounts${regionMessage}`,
       data: {
         processed: processedAccounts.length,
-        totalFound: diamondPlusAccounts.length,
+        totalFound: diamondPlusUserAccounts.length,
         region: region || 'all',
         accounts: processedAccounts,
         errors: errors.length > 0 ? errors : undefined
@@ -566,15 +723,13 @@ router.post('/decay/check-matches', [
   authenticateApiKey
 ], async (req, res) => {
   try {
-    // Find all active accounts
-    const allAccounts = await LeagueAccount.find({
-      isActive: true
-    });
+    // Find all LeagueAccount documents
+    const allLeagueAccounts = await LeagueAccount.find({});
 
-    if (allAccounts.length === 0) {
+    if (allLeagueAccounts.length === 0) {
       return res.json({
         success: true,
-        message: 'No active accounts found to check',
+        message: 'No league accounts found to check',
         data: {
           processed: 0,
           accounts: []
@@ -585,30 +740,56 @@ router.post('/decay/check-matches', [
     const processedAccounts = [];
     const errors = [];
 
-    // Process each account
-    for (const account of allAccounts) {
+    // Process each LeagueAccount
+    for (const leagueAccount of allLeagueAccounts) {
       try {
-        const result = await processAccountMatchHistory(account);
-        
-        if (result.updated) {
-          processedAccounts.push({
-            id: account._id,
-            riotId: account.riotId,
-            tier: account.tier,
-            division: account.division,
-            gamesPlayed: result.gamesPlayed,
-            previousDecayDays: result.previousDecayDays,
-            currentDecayDays: result.currentDecayDays,
-            decayDaysAdded: result.decayDaysAdded,
-            latestGameId: result.latestGameId
-          });
-        }
+        // Check match history ONCE per LeagueAccount
+        const result = await processAccountMatchHistory(leagueAccount);
 
+        if (result.updated) {
+          // Find all linked UserLeagueAccounts
+          const userAccounts = await UserLeagueAccount.find({ leagueAccountId: leagueAccount._id });
+          for (const userAccount of userAccounts) {
+            // Increment remainingDecayDays as appropriate
+            let decayDaysToAdd = 0;
+            let maxDecayDays = 28;
+            if (leagueAccount.tier === 'DIAMOND') {
+              decayDaysToAdd = result.gamesPlayed * 7;
+              maxDecayDays = 28;
+            } else if (['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(leagueAccount.tier)) {
+              decayDaysToAdd = result.gamesPlayed * 1;
+              maxDecayDays = 14;
+            }
+            if (decayDaysToAdd > 0) {
+              const previousDecayDays = userAccount.remainingDecayDays;
+              if (previousDecayDays === -1) {
+                userAccount.remainingDecayDays = maxDecayDays;
+                userAccount.isSpecial = false;
+                userAccount.isDecaying = false;
+              } else {
+                userAccount.remainingDecayDays = Math.min(maxDecayDays, userAccount.remainingDecayDays + decayDaysToAdd);
+              }
+              userAccount.isDecaying = false;
+              await userAccount.save();
+              processedAccounts.push({
+                id: userAccount._id,
+                riotId: leagueAccount.riotId,
+                tier: leagueAccount.tier,
+                division: leagueAccount.division,
+                gamesPlayed: result.gamesPlayed,
+                previousDecayDays,
+                currentDecayDays: userAccount.remainingDecayDays,
+                decayDaysAdded: decayDaysToAdd,
+                latestGameId: result.latestGameId
+              });
+            }
+          }
+        }
       } catch (accountError) {
-        console.error(`   ❌ Error processing account ${account._id}:`, accountError.message);
+        console.error(`   ❌ Error processing league account ${leagueAccount._id}:`, accountError.message);
         errors.push({
-          accountId: account._id,
-          riotId: account.riotId,
+          accountId: leagueAccount._id,
+          riotId: leagueAccount.riotId,
           error: accountError.message
         });
       }
@@ -616,10 +797,10 @@ router.post('/decay/check-matches', [
 
     res.json({
       success: true,
-      message: `Match history check completed for ${processedAccounts.length} accounts`,
+      message: `Match history check completed for ${processedAccounts.length} user accounts`,
       data: {
         processed: processedAccounts.length,
-        totalFound: allAccounts.length,
+        totalFound: allLeagueAccounts.length,
         accounts: processedAccounts,
         errors: errors.length > 0 ? errors : undefined
       }

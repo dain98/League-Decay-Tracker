@@ -60,6 +60,7 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showVerificationMessage, setShowVerificationMessage] = useState(false);
   
   const { 
     signIn, 
@@ -77,8 +78,11 @@ const Login = () => {
     try {
       if (isSignUp) {
         await signUp(email, password, displayName);
-        // For signup, don't redirect - let the AuthGuard handle the flow
-        // The user will be redirected to EmailNotVerified component if email is not verified
+        // Show verification message and redirect to verification page
+        setShowVerificationMessage(true);
+        setTimeout(() => {
+          window.location.href = '/verify-email';
+        }, 2000); // Show message for 2 seconds before redirecting
       } else {
         await signIn(email, password);
         // Redirect to dashboard on sign in success
@@ -139,18 +143,24 @@ const Login = () => {
             {authError}
           </Alert>
         )}
+
+        {showVerificationMessage && (
+          <Alert severity="success" sx={{ mb: 3, width: '100%' }}>
+            Account created successfully! Verification email sent. Redirecting to verification page...
+          </Alert>
+        )}
         
         <Box component="form" onSubmit={handleEmailAuth} sx={{ width: '100%' }}>
           {isSignUp && (
-            <TextField
-              label="Display Name"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              fullWidth
-              margin="normal"
-              variant="outlined"
-              disabled={isLoading}
-            />
+                      <TextField
+            label="Display Name"
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            fullWidth
+            margin="normal"
+            variant="outlined"
+            disabled={isLoading || showVerificationMessage}
+          />
           )}
           
           <TextField
@@ -162,7 +172,7 @@ const Login = () => {
             margin="normal"
             variant="outlined"
             required
-            disabled={isLoading}
+            disabled={isLoading || showVerificationMessage}
           />
           
           <TextField
@@ -174,7 +184,7 @@ const Login = () => {
             margin="normal"
             variant="outlined"
             required
-            disabled={isLoading}
+            disabled={isLoading || showVerificationMessage}
           />
           
           <AuthButton
@@ -182,7 +192,7 @@ const Login = () => {
             variant="contained"
             size="large"
             fullWidth
-            disabled={isLoading}
+            disabled={isLoading || showVerificationMessage}
             sx={{ backgroundColor: '#d13639' }}
           >
             {isLoading ? (
@@ -203,7 +213,7 @@ const Login = () => {
           variant="contained"
           size="large"
           onClick={handleGoogleSignIn}
-          disabled={isLoading}
+          disabled={isLoading || showVerificationMessage}
           startIcon={<GoogleIcon />}
           fullWidth
         >
@@ -221,7 +231,7 @@ const Login = () => {
           <Button
             variant="text"
             onClick={() => setIsSignUp(!isSignUp)}
-            disabled={isLoading}
+            disabled={isLoading || showVerificationMessage}
             sx={{ mt: 1 }}
           >
             {isSignUp ? 'Sign In' : 'Sign Up'}

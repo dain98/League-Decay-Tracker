@@ -1,25 +1,19 @@
 import mongoose from 'mongoose';
 
 const leagueAccountSchema = new mongoose.Schema({
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true,
-    index: true
-  },
+  // Riot API unique identifier - this makes each account unique globally
   puuid: {
     type: String,
     required: true,
+    unique: true,
     index: true
   },
-  summonerIcon: {
-    type: Number,
-    default: 0
-  },
+  // Riot ID components
   gameName: {
     type: String,
     required: true,
-    trim: true
+    trim: true,
+    index: true
   },
   tagLine: {
     type: String,
@@ -33,21 +27,24 @@ const leagueAccountSchema = new mongoose.Schema({
     uppercase: true,
     index: true
   },
-  remainingDecayDays: {
+  // Riot API data (same for all users)
+  summonerIcon: {
     type: Number,
-    default: 28,
-    min: -1,
-    max: 28,
-    index: true
+    default: 0
   },
-  division: {
-    type: String,
-    enum: ['I', 'II', 'III', 'IV'],
-    default: null
+  summonerLevel: {
+    type: Number,
+    default: 1,
+    min: 1
   },
   tier: {
     type: String,
     enum: ['IRON', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'EMERALD', 'DIAMOND', 'MASTER', 'GRANDMASTER', 'CHALLENGER'],
+    default: null
+  },
+  division: {
+    type: String,
+    enum: ['I', 'II', 'III', 'IV'],
     default: null
   },
   lp: {
@@ -59,23 +56,10 @@ const leagueAccountSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  summonerLevel: {
-    type: Number,
-    default: 1,
-    min: 1
-  },
+  // Shared tracking data
   isActive: {
     type: Boolean,
-    default: true
-  },
-  isDecaying: {
-    type: Boolean,
-    default: false,
-    index: true
-  },
-  isSpecial: {
-    type: Boolean,
-    default: false,
+    default: true,
     index: true
   },
   lastUpdated: {
@@ -107,16 +91,8 @@ leagueAccountSchema.virtual('rankDisplay').get(function() {
   return `${this.tier} ${this.division}`;
 });
 
-// Virtual for decay status
-leagueAccountSchema.virtual('decayStatus').get(function() {
-  if (this.remainingDecayDays <= 0) return 'EXPIRED';
-  if (this.remainingDecayDays <= 3) return 'CRITICAL';
-  if (this.remainingDecayDays <= 7) return 'WARNING';
-  return 'SAFE';
-});
-
-// Compound index for user's accounts
-leagueAccountSchema.index({ userId: 1, isActive: 1 });
+// Compound index for region and game name
+leagueAccountSchema.index({ region: 1, gameName: 1, tagLine: 1 }, { unique: true });
 
 // Pre-save middleware to update lastUpdated
 leagueAccountSchema.pre('save', function(next) {
@@ -124,31 +100,36 @@ leagueAccountSchema.pre('save', function(next) {
   next();
 });
 
-// Static method to find user's accounts
-leagueAccountSchema.statics.findByUserId = async function(userId, options = {}) {
-  const query = { userId, isActive: true };
-  
-  if (options.includeInactive) {
-    delete query.isActive;
+// Static method to find or create account by Riot ID
+leagueAccountSchema.statics.findOrCreateByRiotId = async function(gameName, tagLine, region, riotData = {}) {
+  const existingAccount = await this.findOne({
+    region: region.toUpperCase(),
+    gameName: gameName,
+    tagLine: tagLine
+  });
+
+  if (existingAccount) {
+    // Update with latest data from Riot API
+    Object.assign(existingAccount, riotData);
+    await existingAccount.save();
+    return existingAccount;
   }
-  
-  return this.find(query)
-    .sort({ lastUpdated: -1 })
-    .populate('userId', 'name email');
-};
 
-// Static method to find account by puuid
-leagueAccountSchema.statics.findByPuuid = async function(puuid) {
-  return this.findOne({ puuid }).populate('userId', 'name email');
-};
+  // Create new account
+  const newAccount = new this({
+    puuid: riotData.puuid,
+    gameName: gameName,
+    tagLine: tagLine,
+    region: region.toUpperCase(),
+    summonerIcon: riotData.summonerIcon || 0,
+    summonerLevel: riotData.summonerLevel || 1,
+    tier: riotData.tier || null,
+    division: riotData.division || null,
+    lp: riotData.lp || 0,
+    lastSoloDuoGameId: riotData.lastSoloDuoGameId || 'NO_GAMES_YET'
+  });
 
-// Instance method to update decay information
-leagueAccountSchema.methods.updateDecayInfo = async function(decayDays, lastGameId = null, lastGameDate = null) {
-  this.remainingDecayDays = decayDays;
-  if (lastGameId) this.lastSoloDuoGameId = lastGameId;
-  if (lastGameDate) this.lastSoloDuoGameDate = lastGameDate;
-  this.lastUpdated = new Date();
-  return this.save();
+  return await newAccount.save();
 };
 
 // Instance method to update rank information
@@ -156,6 +137,14 @@ leagueAccountSchema.methods.updateRankInfo = async function(tier, division, lp) 
   this.tier = tier;
   this.division = division;
   this.lp = lp;
+  this.lastUpdated = new Date();
+  return this.save();
+};
+
+// Instance method to update summoner info
+leagueAccountSchema.methods.updateSummonerInfo = async function(summonerIcon, summonerLevel) {
+  this.summonerIcon = summonerIcon;
+  this.summonerLevel = summonerLevel;
   this.lastUpdated = new Date();
   return this.save();
 };

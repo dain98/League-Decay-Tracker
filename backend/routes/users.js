@@ -1,7 +1,7 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
 import { authenticateToken } from '../middleware/auth.js';
-import { User, LeagueAccount } from '../database/index.js';
+import { User, LeagueAccount, UserLeagueAccount } from '../database/index.js';
 import axios from 'axios';
 
 const router = express.Router();
@@ -130,22 +130,51 @@ router.put('/me', [
 // Get user's league accounts
 router.get('/me/accounts', authenticateToken, async (req, res) => {
   try {
-    console.log('Fallback name param:', req.query.fallbackName);
-    const user = await User.findOrCreateFromFirebase(req.user, req.query.fallbackName);
-    // Get user's league accounts with population
-    const accounts = await user.populate('leagueAccounts');
-    res.json({
-      success: true,
-      data: accounts.leagueAccounts || []
-    });
-  } catch (error) {
-    if (error.message === 'DUPLICATE_EMAIL') {
-      return res.status(400).json({
+    const user = await User.findOne({ firebaseUid: req.user.sub });
+    if (!user) {
+      return res.status(404).json({
         success: false,
-        error: 'DUPLICATE_EMAIL',
-        message: 'An account with this email already exists. Please log in using your original provider.'
+        error: 'User not found'
       });
     }
+
+    // Use the new normalized structure
+    const userAccounts = await UserLeagueAccount.findByUserId(user._id);
+
+    // Transform the data to match the expected format
+    const accounts = userAccounts.map(userAccount => {
+      const leagueAccount = userAccount.leagueAccountId;
+      return {
+        _id: userAccount._id,
+        userId: userAccount.userId,
+        puuid: leagueAccount.puuid,
+        gameName: leagueAccount.gameName,
+        tagLine: leagueAccount.tagLine,
+        region: leagueAccount.region,
+        summonerIcon: leagueAccount.summonerIcon,
+        summonerLevel: leagueAccount.summonerLevel,
+        tier: leagueAccount.tier,
+        division: leagueAccount.division,
+        lp: leagueAccount.lp,
+        lastSoloDuoGameId: leagueAccount.lastSoloDuoGameId,
+        remainingDecayDays: userAccount.remainingDecayDays,
+        isActive: userAccount.isActive,
+        isDecaying: userAccount.isDecaying,
+        isSpecial: userAccount.isSpecial,
+        lastUpdated: userAccount.lastUpdated,
+        createdAt: userAccount.createdAt,
+        // Add virtuals
+        riotId: leagueAccount.riotId,
+        rankDisplay: leagueAccount.rankDisplay,
+        decayStatus: userAccount.decayStatus
+      };
+    });
+
+    res.json({
+      success: true,
+      data: accounts
+    });
+  } catch (error) {
     console.error('Error getting user accounts:', error);
     res.status(500).json({
       success: false,

@@ -1,7 +1,7 @@
 // Firebase Configuration
 // Environment variables are loaded from .env file
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, connectAuthEmulator } from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -17,5 +17,11 @@ const app = initializeApp(firebaseConfig);
 
 // Initialize Firebase Authentication
 export const auth = getAuth(app);
+
+// Connect to emulators in development
+if (import.meta.env.DEV && import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true') {
+  console.log('Connecting to Firebase Auth emulator...');
+  connectAuthEmulator(auth, "http://localhost:9099");
+}
 
 export default app; 

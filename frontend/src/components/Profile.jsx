@@ -18,7 +18,7 @@ import {
   AppBar,
   Toolbar
 } from '@mui/material';
-import { Save, Cancel, Edit, Delete, Warning } from '@mui/icons-material';
+import { Save, Cancel, Edit, Delete, Warning, ArrowBack } from '@mui/icons-material';
 import { useUserProfile } from '../context/UserProfileContext';
 import { useFirebaseAuth } from '../context/FirebaseAuthContext';
 import { updatePassword, reauthenticateWithCredential, EmailAuthProvider, deleteUser } from 'firebase/auth';
@@ -247,10 +247,31 @@ const Profile = ({ onClose }) => {
       </AppBar>
       
       <Container maxWidth="md" sx={{ mt: 10, mb: 4 }}>
-        <Paper elevation={3} sx={{ p: 4 }}>
-          <Typography variant="h4" gutterBottom>
-            Profile Settings
-          </Typography>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <IconButton
+            onClick={onClose}
+            sx={{ 
+              mt: 1,
+              width: 56,
+              height: 56,
+              border: '2px solid',
+              borderColor: 'primary.main',
+              borderRadius: 1,
+              '&:hover': {
+                backgroundColor: 'primary.main',
+                color: 'white'
+              }
+            }}
+            size="large"
+            aria-label="back to dashboard"
+          >
+            <ArrowBack />
+          </IconButton>
+          
+          <Paper elevation={3} sx={{ p: 4, flex: 1 }}>
+            <Typography variant="h4" gutterBottom>
+              Profile Settings
+            </Typography>
 
           {error && (
             <Alert severity="error" sx={{ mb: 3 }}>
@@ -319,14 +340,6 @@ const Profile = ({ onClose }) => {
                 disabled={isSubmitting}
               >
                 {isSubmitting ? 'Saving...' : 'Save Changes'}
-              </Button>
-              
-              <Button
-                variant="outlined"
-                onClick={handleCancel}
-                disabled={isSubmitting}
-              >
-                Cancel
               </Button>
             </Box>
           </form>
@@ -417,9 +430,8 @@ const Profile = ({ onClose }) => {
             </Typography>
             <ul style={{ margin: '0 0 16px 0', paddingLeft: '20px', color: 'error.contrastText' }}>
               <li>Your user profile</li>
-              <li>All your League of Legends accounts</li>
+              <li>All your linked League of Legends accounts</li>
               <li>All your account data and settings</li>
-              <li>Your Firebase authentication account</li>
             </ul>
             <Button
               variant="contained"
@@ -437,6 +449,7 @@ const Profile = ({ onClose }) => {
             </Button>
           </Box>
         </Paper>
+        </Box>
 
         {/* Image URL Dialog */}
         <Box

@@ -28,4 +28,11 @@ if (!admin.apps.length) {
 }
 
 export const auth = admin.auth();
+
+// Connect to Firebase Auth emulator in development
+if (process.env.NODE_ENV === 'development' || process.env.USE_FIREBASE_EMULATOR === 'true') {
+  console.log('Connecting to Firebase Auth emulator...');
+  process.env.FIREBASE_AUTH_EMULATOR_HOST = 'localhost:9099';
+}
+
 export default admin; 

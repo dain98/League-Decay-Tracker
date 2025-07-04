@@ -9,7 +9,7 @@ import DuplicateEmailError from './components/DuplicateEmailError';
 import EmailNotVerified from './components/EmailNotVerified';
 import { useDataDragon } from './hooks/useDataDragon.js';
 import TermsOfService from './components/TermsOfService';
-import PrivacyPolicy from './components/PrivacyPolicy';
+import Privacy from './components/Privacy';
 import Footer from './components/Footer';
 import './App.css';
 
@@ -73,7 +73,7 @@ function App() {
             <Route path="/duplicate-email" element={<DuplicateEmailError />} />
             <Route path="/verify-email" element={<EmailNotVerified />} />
             <Route path="/terms" element={<TermsOfService />} />
-            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/privacy" element={<Privacy />} />
             <Route 
               path="/dashboard" 
               element={

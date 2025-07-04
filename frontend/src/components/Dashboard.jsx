@@ -42,6 +42,7 @@ import GlobalDecayCountdown from './GlobalDecayCountdown';
 import UserMenu from './UserMenu';
 import Profile from './Profile';
 import { LoadingState, ErrorState, NoUserState, EmptyAccountsState } from './DashboardStates';
+import EmailNotVerified from './EmailNotVerified';
 
 // Styled components
 const DashboardContainer = styled(Container)(({ theme }) => ({
@@ -100,6 +101,7 @@ const Dashboard = () => {
         url += `?fallbackName=${encodeURIComponent(fallbackNameParam)}`;
       }
       const response = await apiClient.get(url);
+      console.log('Accounts API response:', response.data.data); // Debug log
       setAccounts(response.data.data || []);
     } catch (error) {
       if (error.response && error.response.data && error.response.data.error === 'MISSING_NAME') {
@@ -315,6 +317,11 @@ const Dashboard = () => {
   };
 
   const urgentAccount = getMostUrgentAccount();
+  
+  // Check for email verification
+  if (user && !user.emailVerified) {
+    return <EmailNotVerified />;
+  }
   
   // Handler for submitting fallback name
   const handleFallbackNameSubmit = async () => {

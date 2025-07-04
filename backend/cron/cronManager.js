@@ -6,7 +6,7 @@ dotenv.config();
 
 const API_BASE_URL = process.env.RAILWAY_PUBLIC_DOMAIN 
   ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` 
-  : 'http://localhost:3001';
+  : 'http://localhost:5000';
 const API_KEY = process.env.DECAY_API_KEY;
 
 class CronManager {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Container,
   Paper,
@@ -16,17 +16,7 @@ const EmailNotVerified = () => {
   const [isResending, setIsResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
   const [resendError, setResendError] = useState('');
-  const [hasShownInitialMessage, setHasShownInitialMessage] = useState(false);
 
-  // Show initial success message when component mounts
-  useEffect(() => {
-    if (user && !hasShownInitialMessage) {
-      setHasShownInitialMessage(true);
-      setResendSuccess(true);
-      // Clear the initial message after 5 seconds
-      setTimeout(() => setResendSuccess(false), 5000);
-    }
-  }, [user, hasShownInitialMessage]);
 
   const handleResendVerification = async () => {
     if (!user) return;
