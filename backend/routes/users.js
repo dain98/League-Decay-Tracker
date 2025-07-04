@@ -200,7 +200,7 @@ router.get('/me/stats', authenticateToken, async (req, res) => {
 // Delete user account (hard delete, cascade league accounts)
 router.delete('/me', authenticateToken, async (req, res) => {
   try {
-    const user = await User.findOne({ firebaseUid: req.user.uid });
+    const user = await User.findOne({ firebaseUid: req.user.sub });
     if (!user) {
       return res.status(404).json({
         success: false,
