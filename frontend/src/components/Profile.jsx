@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   Container,
   Paper,
@@ -9,31 +9,22 @@ import {
   Avatar,
   CircularProgress,
   Alert,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions
+  IconButton
 } from '@mui/material';
-import { PhotoCamera, Save, Cancel, Edit } from '@mui/icons-material';
+import { Save, Cancel, Edit } from '@mui/icons-material';
 import { useUserProfile } from '../context/UserProfileContext';
 import { useFirebaseAuth } from '../context/FirebaseAuthContext';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '../config/firebase';
 
 const Profile = ({ onClose }) => {
   const { profile, updateProfile, loading, error } = useUserProfile();
   const { user } = useFirebaseAuth();
   const [formData, setFormData] = useState({
     name: profile?.name || '',
-    nickname: profile?.nickname || ''
+    nickname: profile?.nickname || '',
+    picture: profile?.picture || ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [isUploading, setIsUploading] = useState(false);
-  const [previewImage, setPreviewImage] = useState(null);
   const [showImageDialog, setShowImageDialog] = useState(false);
-  const fileInputRef = useRef();
 
   const handleInputChange = (field) => (event) => {
     setFormData(prev => ({
@@ -46,71 +37,16 @@ const Profile = ({ onClose }) => {
     setShowImageDialog(true);
   };
 
-  const handleFileSelect = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        alert('Please select an image file');
-        return;
-      }
-      
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        alert('Image size must be less than 5MB');
-        return;
-      }
-
-      // Create preview
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setPreviewImage(e.target.result);
-      };
-      reader.readAsDataURL(file);
-    }
+  const handleImageSave = () => {
+    setShowImageDialog(false);
   };
 
-  const handleImageUpload = async () => {
-    if (!fileInputRef.current?.files[0] || !user) return;
-
-    const file = fileInputRef.current.files[0];
-    setIsUploading(true);
-    setUploadProgress(0);
-
-    try {
-      // Create a unique filename
-      const fileExtension = file.name.split('.').pop();
-      const fileName = `avatars/${user.uid}_${Date.now()}.${fileExtension}`;
-      
-      // Upload to Firebase Storage
-      const storageRef = ref(storage, fileName);
-      
-      // Simulate upload progress (Firebase doesn't provide progress for uploadBytes)
-      const progressInterval = setInterval(() => {
-        setUploadProgress(prev => Math.min(prev + 10, 90));
-      }, 100);
-
-      await uploadBytes(storageRef, file);
-      clearInterval(progressInterval);
-      setUploadProgress(100);
-
-      // Get download URL
-      const downloadURL = await getDownloadURL(storageRef);
-      
-      // Update profile with new avatar URL
-      await updateProfile({ picture: downloadURL });
-      
-      setShowImageDialog(false);
-      setPreviewImage(null);
-      setUploadProgress(0);
-      
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      alert('Failed to upload image. Please try again.');
-    } finally {
-      setIsUploading(false);
-      setUploadProgress(0);
-    }
+  const handleImageCancel = () => {
+    setFormData(prev => ({
+      ...prev,
+      picture: profile?.picture || ''
+    }));
+    setShowImageDialog(false);
   };
 
   const handleSubmit = async (e) => {
@@ -130,7 +66,8 @@ const Profile = ({ onClose }) => {
   const handleCancel = () => {
     setFormData({
       name: profile?.name || '',
-      nickname: profile?.nickname || ''
+      nickname: profile?.nickname || '',
+      picture: profile?.picture || ''
     });
     onClose();
   };
@@ -151,7 +88,7 @@ const Profile = ({ onClose }) => {
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
           <Box sx={{ position: 'relative', mr: 3 }}>
             <Avatar
-              src={profile?.picture || user?.photoURL}
+              src={formData.picture || profile?.picture || user?.photoURL}
               sx={{ 
                 width: 100, 
                 height: 100, 
@@ -231,67 +168,57 @@ const Profile = ({ onClose }) => {
         </form>
       </Paper>
 
-      {/* Image Upload Dialog */}
-      <Dialog open={showImageDialog} onClose={() => setShowImageDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Update Profile Picture</DialogTitle>
-        <DialogContent>
-          <Box sx={{ textAlign: 'center', py: 2 }}>
-            {previewImage ? (
-              <Avatar
-                src={previewImage}
-                sx={{ width: 150, height: 150, mx: 'auto', mb: 2 }}
-              />
-            ) : (
-              <Avatar
-                src={profile?.picture || user?.photoURL}
-                sx={{ width: 150, height: 150, mx: 'auto', mb: 2 }}
-              />
-            )}
-            
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileSelect}
-              style={{ display: 'none' }}
+      {/* Image URL Dialog */}
+      <Box
+        sx={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: showImageDialog ? 'flex' : 'none',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1300
+        }}
+        onClick={() => setShowImageDialog(false)}
+      >
+        <Paper
+          sx={{ p: 3, maxWidth: 400, width: '90%' }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Typography variant="h6" gutterBottom>
+            Update Profile Picture
+          </Typography>
+          
+          <Box sx={{ textAlign: 'center', mb: 3 }}>
+            <Avatar
+              src={formData.picture || profile?.picture || user?.photoURL}
+              sx={{ width: 150, height: 150, mx: 'auto', mb: 2 }}
             />
-            
-            <Button
-              variant="outlined"
-              startIcon={<PhotoCamera />}
-              onClick={() => fileInputRef.current?.click()}
-              sx={{ mb: 2 }}
-            >
-              Choose Image
-            </Button>
-            
-            {isUploading && (
-              <Box sx={{ mt: 2 }}>
-                <CircularProgress variant="determinate" value={uploadProgress} />
-                <Typography variant="body2" sx={{ mt: 1 }}>
-                  Uploading... {uploadProgress}%
-                </Typography>
-              </Box>
-            )}
-            
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-              Supported formats: JPG, PNG, GIF (max 5MB)
-            </Typography>
           </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowImageDialog(false)} disabled={isUploading}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleImageUpload}
-            variant="contained"
-            disabled={!previewImage || isUploading}
-          >
-            {isUploading ? 'Uploading...' : 'Upload'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+          
+          <TextField
+            fullWidth
+            label="Image URL"
+            value={formData.picture}
+            onChange={handleInputChange('picture')}
+            placeholder="https://example.com/avatar.jpg"
+            helperText="Enter a URL to your profile picture"
+            sx={{ mb: 3 }}
+          />
+          
+          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+            <Button onClick={handleImageCancel}>
+              Cancel
+            </Button>
+            <Button onClick={handleImageSave} variant="contained">
+              Save
+            </Button>
+          </Box>
+        </Paper>
+      </Box>
     </Container>
   );
 };
