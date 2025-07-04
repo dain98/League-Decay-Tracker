@@ -266,23 +266,6 @@ const Profile = ({ onClose }) => {
 
         <Divider sx={{ my: 4 }} />
 
-        {/* Email Change Section */}
-        <Typography variant="h6" gutterBottom>
-          Change Email Address
-        </Typography>
-        
-        <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1, backgroundColor: 'action.hover' }}>
-          <Typography variant="body2" color="text.secondary">
-            <strong>Current Email:</strong> {profile?.email || user?.email}
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Email changes are temporarily disabled due to Firebase authentication requirements. 
-            To change your email, please contact support or create a new account with the desired email.
-          </Typography>
-        </Box>
-
-        <Divider sx={{ my: 4 }} />
-
         {/* Password Change Section */}
         <Typography variant="h6" gutterBottom>
           Change Password

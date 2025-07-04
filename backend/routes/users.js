@@ -96,22 +96,10 @@ router.put('/me', [
     }
 
     // Update allowed fields
-    const { name, nickname, picture, email } = req.body;
+    const { name, nickname, picture } = req.body;
     if (name) user.name = name;
     if (nickname) user.nickname = nickname;
     if (picture) user.picture = picture;
-    if (email) {
-      // Check if email is already taken by another user
-      const existingUser = await User.findOne({ email, _id: { $ne: user._id } });
-      if (existingUser) {
-        return res.status(409).json({
-          success: false,
-          error: 'Email already in use',
-          message: 'This email address is already associated with another account.'
-        });
-      }
-      user.email = email;
-    }
 
     await user.save();
 
