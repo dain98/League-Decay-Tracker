@@ -152,19 +152,6 @@ router.post('/', [
     // Get account info from Riot API
     try {
       const riotAccountInfo = await getRiotAccountInfo(gameName, tagLine, region);
-      
-      // Check if account already exists globally (different user)
-      const globalExistingAccount = await LeagueAccount.findOne({
-        puuid: riotAccountInfo.puuid
-      });
-
-      if (globalExistingAccount) {
-        return res.status(409).json({
-          success: false,
-          error: 'Account already registered',
-          message: 'This League account is already registered by another user'
-        });
-      }
 
       // Get summoner info to get profile icon and level
       const summonerInfo = await getSummonerInfo(riotAccountInfo.puuid, region);

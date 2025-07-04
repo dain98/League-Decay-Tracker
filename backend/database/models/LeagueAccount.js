@@ -10,7 +10,6 @@ const leagueAccountSchema = new mongoose.Schema({
   puuid: {
     type: String,
     required: true,
-    unique: true,
     index: true
   },
   summonerIcon: {
