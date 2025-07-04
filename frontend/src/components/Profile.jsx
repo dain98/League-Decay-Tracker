@@ -51,6 +51,11 @@ const Profile = ({ onClose }) => {
   const [isPasswordSubmitting, setIsPasswordSubmitting] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState('');
+  
+  // Check if user has a password (not OAuth-only)
+  const hasPassword = user?.providerData?.some(provider => 
+    provider.providerId === 'password'
+  ) || false;
 
   // Check for pending email verification on component mount
   useEffect(() => {
@@ -216,9 +221,18 @@ const Profile = ({ onClose }) => {
     setPasswordSuccess('');
 
     try {
-      // Re-authenticate user
-      const credential = EmailAuthProvider.credential(user.email, passwordData.currentPassword);
-      await reauthenticateWithCredential(user, credential);
+      // If user has a password, require re-authentication
+      if (hasPassword) {
+        if (!passwordData.currentPassword) {
+          setPasswordError('Current password is required');
+          setIsPasswordSubmitting(false);
+          return;
+        }
+        
+        // Re-authenticate user
+        const credential = EmailAuthProvider.credential(user.email, passwordData.currentPassword);
+        await reauthenticateWithCredential(user, credential);
+      }
       
       // Update password
       await updatePassword(user, passwordData.newPassword);
@@ -236,6 +250,9 @@ const Profile = ({ onClose }) => {
           break;
         case 'auth/weak-password':
           errorMessage = 'New password is too weak';
+          break;
+        case 'auth/requires-recent-login':
+          errorMessage = 'For security reasons, please log out and log back in before changing your password';
           break;
         default:
           errorMessage = error.message;
@@ -418,15 +435,18 @@ const Profile = ({ onClose }) => {
         )}
 
         <form onSubmit={handlePasswordUpdate}>
-          <TextField
-            fullWidth
-            label="Current Password"
-            type="password"
-            value={passwordData.currentPassword}
-            onChange={handlePasswordChange('currentPassword')}
-            margin="normal"
-            required
-          />
+          {hasPassword && (
+            <TextField
+              fullWidth
+              label="Current Password"
+              type="password"
+              value={passwordData.currentPassword}
+              onChange={handlePasswordChange('currentPassword')}
+              margin="normal"
+              required
+              helperText="Required to verify your identity"
+            />
+          )}
           
           <TextField
             fullWidth
@@ -453,10 +473,10 @@ const Profile = ({ onClose }) => {
             <Button
               type="submit"
               variant="contained"
-              disabled={isPasswordSubmitting || !passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword}
+              disabled={isPasswordSubmitting || (hasPassword && !passwordData.currentPassword) || !passwordData.newPassword || !passwordData.confirmPassword}
               startIcon={isPasswordSubmitting ? <CircularProgress size={20} /> : <Save />}
             >
-              {isPasswordSubmitting ? 'Updating...' : 'Update Password'}
+              {isPasswordSubmitting ? 'Updating...' : hasPassword ? 'Update Password' : 'Set Password'}
             </Button>
           </Box>
         </form>
