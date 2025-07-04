@@ -85,31 +85,19 @@ const Profile = ({ onClose }) => {
 
   const handleEmailUpdate = async (e) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || !hasPassword) return;
 
     setIsEmailSubmitting(true);
     setEmailError('');
     setEmailSuccess('');
 
     try {
-      // Check if user is OAuth-only (no password)
-      const isOAuthOnly = !hasPassword;
+      // Only email/password users can change their email
+      await updateEmail(user, emailData.newEmail);
+      await updateProfile({ email: emailData.newEmail });
       
-      if (isOAuthOnly) {
-        // For OAuth users, we can't change email through Firebase
-        // Instead, we'll update the backend profile and inform the user
-        await updateProfile({ email: emailData.newEmail });
-        
-        setEmailSuccess('Email updated in your profile! Note: For OAuth accounts, the email change is only reflected in this app. Your Google/Twitter account email remains unchanged.');
-        setEmailData({ newEmail: '' });
-      } else {
-        // For email/password users, try Firebase email change
-        await updateEmail(user, emailData.newEmail);
-        await updateProfile({ email: emailData.newEmail });
-        
-        setEmailSuccess('Email updated successfully! Please check your inbox for a verification email.');
-        setEmailData({ newEmail: '' });
-      }
+      setEmailSuccess('Email updated successfully! Please check your inbox for a verification email.');
+      setEmailData({ newEmail: '' });
       
     } catch (error) {
       console.error('Error updating email:', error);
@@ -121,9 +109,6 @@ const Profile = ({ onClose }) => {
           break;
         case 'auth/invalid-email':
           errorMessage = 'Please enter a valid email address';
-          break;
-        case 'auth/operation-not-allowed':
-          errorMessage = 'Email change not allowed for OAuth accounts. The email will be updated in your profile only.';
           break;
         case 'auth/requires-recent-login':
           errorMessage = 'For security reasons, please log out and log back in before changing your email.';
@@ -335,41 +320,55 @@ const Profile = ({ onClose }) => {
           Change Email Address
         </Typography>
         
-        {emailError && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {emailError}
-          </Alert>
-        )}
-        
-        {emailSuccess && (
-          <Alert severity="success" sx={{ mb: 2 }}>
-            {emailSuccess}
-          </Alert>
-        )}
+        {hasPassword ? (
+          <>
+            {emailError && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {emailError}
+              </Alert>
+            )}
+            
+            {emailSuccess && (
+              <Alert severity="success" sx={{ mb: 2 }}>
+                {emailSuccess}
+              </Alert>
+            )}
 
-        <form onSubmit={handleEmailUpdate}>
-          <TextField
-            fullWidth
-            label="New Email Address"
-            type="email"
-            value={emailData.newEmail}
-            onChange={handleEmailChange('newEmail')}
-            margin="normal"
-            required
-            helperText="A verification email will be sent to the new address"
-          />
+            <form onSubmit={handleEmailUpdate}>
+              <TextField
+                fullWidth
+                label="New Email Address"
+                type="email"
+                value={emailData.newEmail}
+                onChange={handleEmailChange('newEmail')}
+                margin="normal"
+                required
+                helperText="A verification email will be sent to the new address"
+              />
 
-          <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
-            <Button
-              type="submit"
-              variant="contained"
-              disabled={isEmailSubmitting || !emailData.newEmail}
-              startIcon={isEmailSubmitting ? <CircularProgress size={20} /> : <Save />}
-            >
-              {isEmailSubmitting ? 'Sending...' : 'Send Verification Email'}
-            </Button>
+              <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  disabled={isEmailSubmitting || !emailData.newEmail}
+                  startIcon={isEmailSubmitting ? <CircularProgress size={20} /> : <Save />}
+                >
+                  {isEmailSubmitting ? 'Sending...' : 'Send Verification Email'}
+                </Button>
+              </Box>
+            </form>
+          </>
+        ) : (
+          <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1, backgroundColor: 'action.hover' }}>
+            <Typography variant="body2" color="text.secondary">
+              <strong>Current Email:</strong> {profile?.email || user?.email}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              Email changes are not available for OAuth accounts (Google, Twitter, etc.). 
+              To change your email, please contact support or create a new account with the desired email.
+            </Typography>
           </Box>
-        </form>
+        )}
 
         <Divider sx={{ my: 4 }} />
 
