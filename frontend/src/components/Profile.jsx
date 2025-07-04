@@ -31,16 +31,9 @@ const Profile = ({ onClose }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showImageDialog, setShowImageDialog] = useState(false);
   
-  // Email change state
-  const [emailData, setEmailData] = useState({
-    newEmail: '',
-    oldEmail: ''
-  });
-  const [isEmailSubmitting, setIsEmailSubmitting] = useState(false);
+  // Email change state (temporarily disabled)
   const [emailError, setEmailError] = useState('');
   const [emailSuccess, setEmailSuccess] = useState('');
-  const [showEmailVerificationDialog, setShowEmailVerificationDialog] = useState(false);
-  const [pendingEmailChange, setPendingEmailChange] = useState(null);
   
   // Password change state
   const [passwordData, setPasswordData] = useState({
@@ -57,14 +50,7 @@ const Profile = ({ onClose }) => {
     provider.providerId === 'password'
   ) || false;
 
-  // Check for pending email verification on component mount
-  useEffect(() => {
-    const pendingEmail = localStorage.getItem('pendingEmailChange');
-    if (pendingEmail) {
-      setPendingEmailChange(JSON.parse(pendingEmail));
-      setShowEmailVerificationDialog(true);
-    }
-  }, []);
+
 
   const handleInputChange = (field) => (event) => {
     setFormData(prev => ({
@@ -73,14 +59,7 @@ const Profile = ({ onClose }) => {
     }));
   };
 
-  const handleEmailChange = (field) => (event) => {
-    setEmailData(prev => ({
-      ...prev,
-      [field]: event.target.value
-    }));
-    setEmailError('');
-    setEmailSuccess('');
-  };
+
 
   const handlePasswordChange = (field) => (event) => {
     setPasswordData(prev => ({
@@ -107,98 +86,7 @@ const Profile = ({ onClose }) => {
     setShowImageDialog(false);
   };
 
-  const handleEmailUpdate = async (e) => {
-    e.preventDefault();
-    if (!user) return;
 
-    setIsEmailSubmitting(true);
-    setEmailError('');
-    setEmailSuccess('');
-
-    try {
-      // Store the old email for potential rollback
-      const oldEmail = user.email;
-      
-      // Update email in Firebase
-      await updateEmail(user, emailData.newEmail);
-      
-      // Store pending email change in localStorage
-      const pendingChange = {
-        newEmail: emailData.newEmail,
-        oldEmail: oldEmail,
-        timestamp: Date.now()
-      };
-      localStorage.setItem('pendingEmailChange', JSON.stringify(pendingChange));
-      setPendingEmailChange(pendingChange);
-      
-      // Show verification dialog
-      setShowEmailVerificationDialog(true);
-      setEmailData({ newEmail: '', oldEmail: '' });
-      
-    } catch (error) {
-      console.error('Error updating email:', error);
-      let errorMessage = 'Failed to update email';
-      
-      switch (error.code) {
-        case 'auth/email-already-in-use':
-          errorMessage = 'This email is already in use by another account';
-          break;
-        case 'auth/invalid-email':
-          errorMessage = 'Please enter a valid email address';
-          break;
-        default:
-          errorMessage = error.message;
-      }
-      
-      setEmailError(errorMessage);
-    } finally {
-      setIsEmailSubmitting(false);
-    }
-  };
-
-  const handleEmailVerificationDone = async () => {
-    if (!user || !pendingEmailChange) return;
-
-    try {
-      // Check if email is verified
-      await user.reload();
-      const currentUser = user;
-      
-      if (currentUser.emailVerified) {
-        // Email is verified, update backend and close dialog
-        await updateProfile({ email: currentUser.email });
-        localStorage.removeItem('pendingEmailChange');
-        setShowEmailVerificationDialog(false);
-        setPendingEmailChange(null);
-        setEmailSuccess('Email updated and verified successfully!');
-      } else {
-        // Email not verified, show warning
-        setEmailError('Please verify your email address before continuing. Check your inbox for a verification email.');
-      }
-    } catch (error) {
-      console.error('Error checking email verification:', error);
-      setEmailError('Failed to check email verification status. Please try again.');
-    }
-  };
-
-  const handleEmailVerificationCancel = async () => {
-    if (!user || !pendingEmailChange) return;
-
-    try {
-      // Revert email back to old email
-      await updateEmail(user, pendingEmailChange.oldEmail);
-      
-      // Clear pending change
-      localStorage.removeItem('pendingEmailChange');
-      setShowEmailVerificationDialog(false);
-      setPendingEmailChange(null);
-      
-      setEmailSuccess('Email change cancelled. Your email has been reverted.');
-    } catch (error) {
-      console.error('Error reverting email:', error);
-      setEmailError('Failed to revert email. Please contact support.');
-    }
-  };
 
   const handlePasswordUpdate = async (e) => {
     e.preventDefault();
@@ -379,6 +267,11 @@ const Profile = ({ onClose }) => {
           Change Email Address
         </Typography>
         
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Email change is temporarily unavailable due to Firebase security requirements. 
+          Please contact support if you need to change your email address.
+        </Alert>
+        
         {emailError && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {emailError}
@@ -391,29 +284,14 @@ const Profile = ({ onClose }) => {
           </Alert>
         )}
 
-        <form onSubmit={handleEmailUpdate}>
-          <TextField
-            fullWidth
-            label="New Email Address"
-            type="email"
-            value={emailData.newEmail}
-            onChange={handleEmailChange('newEmail')}
-            margin="normal"
-            required
-            helperText="A verification email will be sent to the new address"
-          />
-
-          <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
-            <Button
-              type="submit"
-              variant="contained"
-              disabled={isEmailSubmitting || !emailData.newEmail}
-              startIcon={isEmailSubmitting ? <CircularProgress size={20} /> : <Save />}
-            >
-              {isEmailSubmitting ? 'Updating...' : 'Update Email'}
-            </Button>
-          </Box>
-        </form>
+        <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1, backgroundColor: 'action.hover' }}>
+          <Typography variant="body2" color="text.secondary">
+            <strong>Current Email:</strong> {profile?.email || user?.email}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            To change your email address, please contact support or create a new account with the desired email.
+          </Typography>
+        </Box>
 
         <Divider sx={{ my: 4 }} />
 
@@ -482,36 +360,7 @@ const Profile = ({ onClose }) => {
         </form>
       </Paper>
 
-      {/* Email Verification Dialog */}
-      <Dialog 
-        open={showEmailVerificationDialog} 
-        onClose={() => {}} // Prevent closing by clicking outside
-        maxWidth="sm" 
-        fullWidth
-      >
-        <DialogTitle>
-          Verify Your Email Address
-        </DialogTitle>
-        <DialogContent>
-          <Typography paragraph>
-            We've sent a verification email to <strong>{pendingEmailChange?.newEmail}</strong>.
-          </Typography>
-          <Typography paragraph>
-            Please check your inbox and click the verification link to complete the email change.
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            If you don't see the email, check your spam folder.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleEmailVerificationCancel} color="secondary">
-            Cancel
-          </Button>
-          <Button onClick={handleEmailVerificationDone} variant="contained">
-            Done
-          </Button>
-        </DialogActions>
-      </Dialog>
+
 
       {/* Image URL Dialog */}
       <Box
