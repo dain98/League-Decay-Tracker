@@ -31,7 +31,11 @@ const Profile = ({ onClose }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showImageDialog, setShowImageDialog] = useState(false);
   
-  // Email change state (temporarily disabled)
+  // Email change state
+  const [emailData, setEmailData] = useState({
+    newEmail: ''
+  });
+  const [isEmailSubmitting, setIsEmailSubmitting] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [emailSuccess, setEmailSuccess] = useState('');
   
@@ -59,6 +63,15 @@ const Profile = ({ onClose }) => {
     }));
   };
 
+  const handleEmailChange = (field) => (event) => {
+    setEmailData(prev => ({
+      ...prev,
+      [field]: event.target.value
+    }));
+    setEmailError('');
+    setEmailSuccess('');
+  };
+
 
 
   const handlePasswordChange = (field) => (event) => {
@@ -68,6 +81,54 @@ const Profile = ({ onClose }) => {
     }));
     setPasswordError('');
     setPasswordSuccess('');
+  };
+
+  const handleEmailUpdate = async (e) => {
+    e.preventDefault();
+    if (!user) return;
+
+    setIsEmailSubmitting(true);
+    setEmailError('');
+    setEmailSuccess('');
+
+    try {
+      // For Firebase email changes, we need to handle this differently
+      // The user needs to be recently authenticated and the email needs to be verified
+      
+      // First, let's try to update the email directly
+      await updateEmail(user, emailData.newEmail);
+      
+      // If successful, update the backend profile
+      await updateProfile({ email: emailData.newEmail });
+      
+      setEmailSuccess('Email updated successfully! Please check your inbox for a verification email.');
+      setEmailData({ newEmail: '' });
+      
+    } catch (error) {
+      console.error('Error updating email:', error);
+      let errorMessage = 'Failed to update email';
+      
+      switch (error.code) {
+        case 'auth/email-already-in-use':
+          errorMessage = 'This email is already in use by another account';
+          break;
+        case 'auth/invalid-email':
+          errorMessage = 'Please enter a valid email address';
+          break;
+        case 'auth/operation-not-allowed':
+          errorMessage = 'Email change requires recent authentication. Please log out and log back in, then try again.';
+          break;
+        case 'auth/requires-recent-login':
+          errorMessage = 'For security reasons, please log out and log back in before changing your email.';
+          break;
+        default:
+          errorMessage = error.message;
+      }
+      
+      setEmailError(errorMessage);
+    } finally {
+      setIsEmailSubmitting(false);
+    }
   };
 
   const handleImageClick = () => {
@@ -267,11 +328,6 @@ const Profile = ({ onClose }) => {
           Change Email Address
         </Typography>
         
-        <Alert severity="info" sx={{ mb: 2 }}>
-          Email change is temporarily unavailable due to Firebase security requirements. 
-          Please contact support if you need to change your email address.
-        </Alert>
-        
         {emailError && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {emailError}
@@ -284,14 +340,29 @@ const Profile = ({ onClose }) => {
           </Alert>
         )}
 
-        <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1, backgroundColor: 'action.hover' }}>
-          <Typography variant="body2" color="text.secondary">
-            <strong>Current Email:</strong> {profile?.email || user?.email}
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            To change your email address, please contact support or create a new account with the desired email.
-          </Typography>
-        </Box>
+        <form onSubmit={handleEmailUpdate}>
+          <TextField
+            fullWidth
+            label="New Email Address"
+            type="email"
+            value={emailData.newEmail}
+            onChange={handleEmailChange('newEmail')}
+            margin="normal"
+            required
+            helperText="A verification email will be sent to the new address"
+          />
+
+          <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={isEmailSubmitting || !emailData.newEmail}
+              startIcon={isEmailSubmitting ? <CircularProgress size={20} /> : <Save />}
+            >
+              {isEmailSubmitting ? 'Sending...' : 'Send Verification Email'}
+            </Button>
+          </Box>
+        </form>
 
         <Divider sx={{ my: 4 }} />
 
