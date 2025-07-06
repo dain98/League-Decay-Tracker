@@ -418,8 +418,12 @@ export const processAccountMatchHistory = async (leagueAccount, userAccount = nu
     if (matchIds.length === 0) {
       console.log(`   ⏭️  No ranked solo/duo matches found`);
       
-      // Save shared account to persist rank updates even if no matches found
-      await leagueAccount.save();
+      // Save both accounts to persist rank updates and any decay logic changes
+      if (userAccount) {
+        await Promise.all([leagueAccount.save(), userAccount.save()]);
+      } else {
+        await leagueAccount.save();
+      }
       
       return {
         updated: false,
@@ -530,8 +534,12 @@ export const processAccountMatchHistory = async (leagueAccount, userAccount = nu
       }
       console.log(`   📝 Updated latest game ID to: ${latestGameId}`);
     } else {
-      // Even if no match history changes, save the shared account to persist rank updates
-      await leagueAccount.save();
+      // Even if no match history changes, save both accounts to persist rank updates and any decay logic changes
+      if (userAccount) {
+        await Promise.all([leagueAccount.save(), userAccount.save()]);
+      } else {
+        await leagueAccount.save();
+      }
     }
 
     return {

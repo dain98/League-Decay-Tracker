@@ -49,7 +49,7 @@ const userSchema = new mongoose.Schema({
 
 // Virtual for getting user's league accounts
 userSchema.virtual('leagueAccounts', {
-  ref: 'LeagueAccount',
+  ref: 'UserLeagueAccount',
   localField: '_id',
   foreignField: 'userId'
 });

@@ -195,9 +195,12 @@ router.get('/me/stats', authenticateToken, async (req, res) => {
       });
     }
 
-    // Get user's league accounts
-    const accounts = await user.populate('leagueAccounts');
-    const leagueAccounts = accounts.leagueAccounts || [];
+    // Get user's league accounts with populated league account data
+    const userAccounts = await UserLeagueAccount.findByUserId(user._id);
+    const leagueAccounts = userAccounts.map(userAccount => ({
+      ...userAccount.toObject(),
+      ...userAccount.leagueAccountId.toObject()
+    }));
 
     // Calculate statistics
     const stats = {
@@ -237,8 +240,8 @@ router.delete('/me', authenticateToken, async (req, res) => {
       });
     }
 
-    // 1. Delete all league accounts for this user
-    await LeagueAccount.deleteMany({ userId: user._id });
+    // 1. Delete all user league account relationships for this user
+    await UserLeagueAccount.deleteMany({ userId: user._id });
 
     // 2. Delete the user document
     await user.deleteOne();

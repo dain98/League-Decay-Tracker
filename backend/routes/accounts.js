@@ -128,7 +128,7 @@ router.get('/:id', [
       isActive: userAccount.isActive,
       isDecaying: userAccount.isDecaying,
       isSpecial: userAccount.isSpecial,
-      lastUpdated: userAccount.lastUpdated,
+      lastUpdated: userAccount.leagueAccountId.lastUpdated,
       createdAt: userAccount.createdAt,
       // Add virtuals
       riotId: userAccount.leagueAccountId.riotId,
@@ -257,6 +257,12 @@ router.post('/', [
         isDecaying: isDecaying === true || isDecaying === 'true' || isDecaying === 'on'
       });
 
+      // Set Emerald accounts to immune immediately
+      if (leagueAccount.tier === 'EMERALD') {
+        userLeagueAccount.remainingDecayDays = -1;
+        console.log(`🛡️  ${leagueAccount.riotId} is Emerald - setting immunity (decay days: -1)`);
+      }
+
       await userLeagueAccount.save();
 
       // Process match history for the new account to ensure accurate decay tracking
@@ -291,7 +297,7 @@ router.post('/', [
         isActive: populatedUserAccount.isActive,
         isDecaying: populatedUserAccount.isDecaying,
         isSpecial: populatedUserAccount.isSpecial,
-        lastUpdated: populatedUserAccount.lastUpdated,
+        lastUpdated: populatedUserAccount.leagueAccountId.lastUpdated,
         createdAt: populatedUserAccount.createdAt,
         // Add virtuals
         riotId: newLeagueAccount.riotId,
@@ -373,6 +379,12 @@ router.put('/:id', [
     if (typeof isSpecial === 'boolean') userAccount.isSpecial = isSpecial;
     if (typeof isDecaying === 'boolean') userAccount.isDecaying = isDecaying;
 
+    // Set Emerald accounts to immune
+    if (userAccount.leagueAccountId.tier === 'EMERALD') {
+      userAccount.remainingDecayDays = -1;
+      console.log(`🛡️  ${userAccount.leagueAccountId.riotId} is Emerald - setting immunity (decay days: -1)`);
+    }
+
     await userAccount.save();
 
     // Transform the data to match the expected format
@@ -393,7 +405,7 @@ router.put('/:id', [
       isActive: userAccount.isActive,
       isDecaying: userAccount.isDecaying,
       isSpecial: userAccount.isSpecial,
-      lastUpdated: userAccount.lastUpdated,
+      lastUpdated: userAccount.leagueAccountId.lastUpdated,
       createdAt: userAccount.createdAt,
       // Add virtuals
       riotId: userAccount.leagueAccountId.riotId,
@@ -526,7 +538,7 @@ router.post('/:id/refresh', [
         isActive: userAccount.isActive,
         isDecaying: userAccount.isDecaying,
         isSpecial: userAccount.isSpecial,
-        lastUpdated: userAccount.lastUpdated,
+        lastUpdated: userAccount.leagueAccountId.lastUpdated,
         createdAt: userAccount.createdAt,
         // Add virtuals
         riotId: userAccount.leagueAccountId.riotId,
@@ -746,10 +758,36 @@ router.post('/decay/check-matches', [
         // Check match history ONCE per LeagueAccount
         const result = await processAccountMatchHistory(leagueAccount);
 
-        if (result.updated) {
-          // Find all linked UserLeagueAccounts
-          const userAccounts = await UserLeagueAccount.find({ leagueAccountId: leagueAccount._id });
-          for (const userAccount of userAccounts) {
+        // Find all linked UserLeagueAccounts
+        const userAccounts = await UserLeagueAccount.find({ leagueAccountId: leagueAccount._id });
+        
+        for (const userAccount of userAccounts) {
+          // Handle Emerald immunity first
+          if (leagueAccount.tier === 'EMERALD' && userAccount.remainingDecayDays !== -1) {
+            const previousDecayDays = userAccount.remainingDecayDays;
+            userAccount.remainingDecayDays = -1; // Set immunity for Emerald
+            userAccount.isDecaying = false;
+            await userAccount.save();
+            
+            processedAccounts.push({
+              id: userAccount._id,
+              riotId: leagueAccount.riotId,
+              tier: leagueAccount.tier,
+              division: leagueAccount.division,
+              gamesPlayed: 0,
+              previousDecayDays,
+              currentDecayDays: -1,
+              decayDaysAdded: 0,
+              latestGameId: result.latestGameId,
+              emeraldImmunity: true
+            });
+            
+            console.log(`🛡️  ${leagueAccount.riotId} is Emerald - set immunity (decay days: -1)`);
+            continue; // Skip regular decay processing for Emerald accounts
+          }
+          
+          // Handle regular decay processing only if result.updated is true
+          if (result.updated) {
             // Increment remainingDecayDays as appropriate
             let decayDaysToAdd = 0;
             let maxDecayDays = 28;

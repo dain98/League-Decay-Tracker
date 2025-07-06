@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 import axios from 'axios';
-import { connectDB, User, LeagueAccount } from './database/index.js';
+import { connectDB, User, LeagueAccount, UserLeagueAccount } from './database/index.js';
 
 dotenv.config();
 
@@ -62,8 +62,7 @@ const testAPIEndpoints = async () => {
     console.log(`   LP: ${rankInfo.lp}`);
 
     // Create league account in database
-    const newAccount = new LeagueAccount({
-      userId: user._id,
+    const newLeagueAccount = new LeagueAccount({
       puuid: riotAccountInfo.puuid,
       summonerIcon: summonerInfo.profileIconId || 1, // Use actual profile icon
       gameName: 'eden',
@@ -73,36 +72,49 @@ const testAPIEndpoints = async () => {
       tier: rankInfo.tier,
       division: rankInfo.division,
       lp: rankInfo.lp,
+      lastSoloDuoGameId: 'NO_GAMES_YET'
+    });
+
+    await newLeagueAccount.save();
+    
+    // Create user's relationship to this account
+    const newUserAccount = new UserLeagueAccount({
+      userId: user._id,
+      leagueAccountId: newLeagueAccount._id,
       remainingDecayDays: 28, // Default value
       isActive: true
     });
 
-    await newAccount.save();
+    await newUserAccount.save();
+    
     console.log('   ✅ League account saved to database');
-    console.log(`   Account ID: ${newAccount._id}`);
-    console.log(`   Riot ID: ${newAccount.riotId}`);
-    console.log(`   Rank: ${newAccount.rankDisplay}`);
-    console.log(`   Decay Status: ${newAccount.decayStatus}\n`);
+    console.log(`   Account ID: ${newUserAccount._id}`);
+    console.log(`   Riot ID: ${newLeagueAccount.riotId}`);
+    console.log(`   Rank: ${newLeagueAccount.rankDisplay}\n`);
 
     // Test 4: Test account retrieval
     console.log('4. Testing account retrieval...');
-    const accounts = await LeagueAccount.findByUserId(user._id);
-    console.log(`   ✅ Found ${accounts.length} account(s) for user`);
+    const userAccounts = await UserLeagueAccount.findByUserId(user._id);
+    console.log(`   ✅ Found ${userAccounts.length} account(s) for user`);
     
-    accounts.forEach((account, index) => {
+    userAccounts.forEach((userAccount, index) => {
+      const account = userAccount.leagueAccountId;
       console.log(`   Account ${index + 1}:`);
       console.log(`     Riot ID: ${account.riotId}`);
       console.log(`     Region: ${account.region}`);
       console.log(`     Rank: ${account.rankDisplay}`);
       console.log(`     LP: ${account.lp}`);
-      console.log(`     Decay Days: ${account.remainingDecayDays}`);
-      console.log(`     Status: ${account.decayStatus}`);
+      console.log(`     Decay Days: ${userAccount.remainingDecayDays}`);
+      console.log(`     Status: ${userAccount.decayStatus}`);
     });
 
     // Test 5: Test user statistics
     console.log('\n5. Testing user statistics...');
-    const userWithAccounts = await user.populate('leagueAccounts');
-    const leagueAccounts = userWithAccounts.leagueAccounts || [];
+    const userAccountsForStats = await UserLeagueAccount.findByUserId(user._id);
+    const leagueAccounts = userAccountsForStats.map(userAccount => ({
+      ...userAccount.toObject(),
+      ...userAccount.leagueAccountId.toObject()
+    }));
 
     const stats = {
       totalAccounts: leagueAccounts.length,

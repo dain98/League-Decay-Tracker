@@ -306,14 +306,12 @@ const Dashboard = () => {
 
   const getMostUrgentAccount = () => {
     return accounts.reduce((urgent, account) => {
-      // If current account is immune (-1), it should be shown if no other urgent account exists
+      // Skip immune accounts (-1) - they should not be considered urgent
       if (account.remainingDecayDays === -1) {
-        if (!urgent || urgent.remainingDecayDays === -1) {
-          return account;
-        }
         return urgent;
       }
       
+      // If no urgent account yet, or current account has fewer days remaining
       if (!urgent || account.remainingDecayDays < urgent.remainingDecayDays) {
         return account;
       }

@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-import { connectDB, User, LeagueAccount } from './database/index.js';
+import { connectDB, User, LeagueAccount, UserLeagueAccount } from './database/index.js';
 
 dotenv.config();
 
@@ -31,46 +31,58 @@ const testMockAPI = async () => {
     // Test 2: Create a mock league account
     console.log('2. Testing league account creation...');
     const mockLeagueAccount = new LeagueAccount({
-      userId: user._id,
       puuid: 'mock-puuid-123456789',
       summonerIcon: 1,
       gameName: 'eden',
       tagLine: 'iino',
       region: 'NA1',
-      remainingDecayDays: 15,
       division: 'II',
       tier: 'GOLD',
       lp: 1250,
       summonerLevel: 150,
-      isActive: true
+      lastSoloDuoGameId: 'NO_GAMES_YET'
     });
 
     await mockLeagueAccount.save();
+    
+    // Create user's relationship to this account
+    const mockUserLeagueAccount = new UserLeagueAccount({
+      userId: user._id,
+      leagueAccountId: mockLeagueAccount._id,
+      remainingDecayDays: 15,
+      isActive: true
+    });
+
+    await mockUserLeagueAccount.save();
+    
     console.log('   ✅ League account created successfully!');
-    console.log(`   Account ID: ${mockLeagueAccount._id}`);
+    console.log(`   Account ID: ${mockUserLeagueAccount._id}`);
     console.log(`   Riot ID: ${mockLeagueAccount.riotId}`);
     console.log(`   Rank: ${mockLeagueAccount.rankDisplay}`);
-    console.log(`   Decay Status: ${mockLeagueAccount.decayStatus}`);
-    console.log(`   Decay Days: ${mockLeagueAccount.remainingDecayDays}\n`);
+    console.log(`   Decay Days: ${mockUserLeagueAccount.remainingDecayDays}\n`);
 
     // Test 3: Test account retrieval
     console.log('3. Testing account retrieval...');
-    const accounts = await LeagueAccount.findByUserId(user._id);
-    console.log(`   ✅ Found ${accounts.length} account(s) for user`);
+    const userAccounts = await UserLeagueAccount.findByUserId(user._id);
+    console.log(`   ✅ Found ${userAccounts.length} account(s) for user`);
     
-    accounts.forEach((account, index) => {
+    userAccounts.forEach((userAccount, index) => {
+      const account = userAccount.leagueAccountId;
       console.log(`   Account ${index + 1}:`);
       console.log(`     Riot ID: ${account.riotId}`);
       console.log(`     Region: ${account.region}`);
       console.log(`     Rank: ${account.rankDisplay}`);
-      console.log(`     Decay Days: ${account.remainingDecayDays}`);
-      console.log(`     Status: ${account.decayStatus}`);
+      console.log(`     Decay Days: ${userAccount.remainingDecayDays}`);
+      console.log(`     Status: ${userAccount.decayStatus}`);
     });
 
     // Test 4: Test user statistics
     console.log('\n4. Testing user statistics...');
-    const userWithAccounts = await user.populate('leagueAccounts');
-    const leagueAccounts = userWithAccounts.leagueAccounts || [];
+    const userAccountsForStats = await UserLeagueAccount.findByUserId(user._id);
+    const leagueAccounts = userAccountsForStats.map(userAccount => ({
+      ...userAccount.toObject(),
+      ...userAccount.leagueAccountId.toObject()
+    }));
 
     const stats = {
       totalAccounts: leagueAccounts.length,

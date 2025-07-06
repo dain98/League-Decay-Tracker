@@ -22,7 +22,6 @@ const PageContainer = styled(Box)({
   width: '100%',
   padding: 0,
   margin: 0,
-  backgroundColor: '#091428',
 });
 
 const LoginContainer = styled(Paper)(({ theme }) => ({
@@ -131,7 +130,7 @@ const Login = () => {
     <PageContainer>
       <LoginContainer elevation={6}>
         <Typography variant="h4" component="h1" gutterBottom>
-          Ranked Decay Tracker
+          LoL Decay Tracker
         </Typography>
         
         <Typography variant="body1" align="center" sx={{ mt: 2, mb: 4 }}>
