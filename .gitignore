@@ -96,3 +96,9 @@ frontend/.firebase/
 backend/.vercel/
 backend/.netlify/
 backend/.firebase/
+
+# Firebase debug logs and cache
+firebase-debug.log
+firestore-debug.log
+pglite-debug.log
+.firebase/
