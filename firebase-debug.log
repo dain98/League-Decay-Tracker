@@ -1,17 +1,19 @@
-[debug] [2025-07-04T20:04:06.780Z] ----------------------------------------------------------------------
-[debug] [2025-07-04T20:04:06.782Z] Command:       /usr/local/bin/node /usr/local/bin/firebase emulators:start
-[debug] [2025-07-04T20:04:06.782Z] CLI Version:   14.9.0
-[debug] [2025-07-04T20:04:06.782Z] Platform:      linux
-[debug] [2025-07-04T20:04:06.782Z] Node Version:  v22.17.0
-[debug] [2025-07-04T20:04:06.783Z] Time:          Fri Jul 04 2025 16:04:06 GMT-0400 (Eastern Daylight Time)
-[debug] [2025-07-04T20:04:06.783Z] ----------------------------------------------------------------------
+[debug] [2025-07-06T19:22:12.765Z] ----------------------------------------------------------------------
+[debug] [2025-07-06T19:22:12.767Z] Command:       /Users/dain/.nvm/versions/node/v20.11.1/bin/node /Users/dain/.nvm/versions/node/v20.11.1/bin/firebase emulators:start
+[debug] [2025-07-06T19:22:12.767Z] CLI Version:   14.9.0
+[debug] [2025-07-06T19:22:12.767Z] Platform:      darwin
+[debug] [2025-07-06T19:22:12.767Z] Node Version:  v20.11.1
+[debug] [2025-07-06T19:22:12.767Z] Time:          Sun Jul 06 2025 15:22:12 GMT-0400 (Eastern Daylight Time)
+[debug] [2025-07-06T19:22:12.767Z] ----------------------------------------------------------------------
 [debug] 
-[debug] [2025-07-04T20:04:06.938Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
-[debug] [2025-07-04T20:04:06.938Z] > authorizing via signed-in user (dain98@gmail.com)
+[debug] [2025-07-06T19:22:12.857Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-07-06T19:22:12.857Z] > authorizing via signed-in user (dain98@gmail.com)
 [info] i  emulators: Starting emulators: auth {"metadata":{"emulator":{"name":"hub"},"message":"Starting emulators: auth"}}
-[debug] [2025-07-04T20:04:06.948Z] assigned listening specs for emulators {"user":{"hub":[{"address":"127.0.0.1","family":"IPv4","port":4400}],"ui":[{"address":"127.0.0.1","family":"IPv4","port":4000}],"logging":[{"address":"127.0.0.1","family":"IPv4","port":4500}],"auth":[{"address":"127.0.0.1","family":"IPv4","port":9099}]},"metadata":{"message":"assigned listening specs for emulators"}}
-[debug] [2025-07-04T20:04:06.951Z] [hub] writing locator at /tmp/hub-lol-decay-tracker.json
-[debug] [2025-07-04T20:04:11.860Z] Could not find VSCode notification endpoint: FetchError: request to http://localhost:40001/vscode/notify failed, reason: connect ECONNREFUSED 127.0.0.1:40001. If you are not running the Firebase Data Connect VSCode extension, this is expected and not an issue.
+[debug] [2025-07-06T19:22:13.157Z] [logging] Logging Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-07-06T19:22:13.157Z] [auth] Authentication Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-07-06T19:22:13.157Z] assigned listening specs for emulators {"user":{"hub":[{"address":"127.0.0.1","family":"IPv4","port":4400},{"address":"::1","family":"IPv6","port":4400}],"ui":[{"address":"127.0.0.1","family":"IPv4","port":4000},{"address":"::1","family":"IPv6","port":4000}],"logging":[{"address":"127.0.0.1","family":"IPv4","port":4500}],"auth":[{"address":"127.0.0.1","family":"IPv4","port":9099}]},"metadata":{"message":"assigned listening specs for emulators"}}
+[debug] [2025-07-06T19:22:13.159Z] [hub] writing locator at /var/folders/rg/tdbx7zl11xb7r_w0jpdj7dt40000gn/T/hub-lol-decay-tracker.json
+[debug] [2025-07-06T19:22:16.241Z] Could not find VSCode notification endpoint: FetchError: request to http://localhost:40001/vscode/notify failed, reason: . If you are not running the Firebase Data Connect VSCode extension, this is expected and not an issue.
 [info] 
 ┌─────────────────────────────────────────────────────────────┐
 │ ✔  All emulators ready! It is now safe to connect your app. │
@@ -28,5 +30,3 @@
 
 Issues? Report them at https://github.com/firebase/firebase-tools/issues and attach the *-debug.log files.
  
-[info] i  To verify the email address personal@dain.cafe, follow this link: http://127.0.0.1:9099/emulator/action?mode=verifyEmail&lang=en&oobCode=dgI07okt85sCTZpsOU3kK2c5vbAP41EeLdkePgIAB7JBgEZoAf6GoW&apiKey=fake-api-key {"metadata":{"emulator":{"name":"auth"},"message":"To verify the email address personal@dain.cafe, follow this link: http://127.0.0.1:9099/emulator/action?mode=verifyEmail&lang=en&oobCode=dgI07okt85sCTZpsOU3kK2c5vbAP41EeLdkePgIAB7JBgEZoAf6GoW&apiKey=fake-api-key"}}
-[info] i  To verify the email address personal@dain.cafe, follow this link: http://127.0.0.1:9099/emulator/action?mode=verifyEmail&lang=en&oobCode=k42yrGwVftM_l9uT3J-rIenMrAObaBmGEhbcbEFieKqhQGD4aIQZvP&apiKey=fake-api-key {"metadata":{"emulator":{"name":"auth"},"message":"To verify the email address personal@dain.cafe, follow this link: http://127.0.0.1:9099/emulator/action?mode=verifyEmail&lang=en&oobCode=k42yrGwVftM_l9uT3J-rIenMrAObaBmGEhbcbEFieKqhQGD4aIQZvP&apiKey=fake-api-key"}}

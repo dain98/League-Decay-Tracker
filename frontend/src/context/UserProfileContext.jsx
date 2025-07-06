@@ -5,7 +5,7 @@ import { createAuthenticatedApiClient } from '../services/authApi';
 const UserProfileContext = createContext();
 
 export const UserProfileProvider = ({ children }) => {
-  const { isAuthenticated, loading: authLoading, getIdToken, user: firebaseUser } = useFirebaseAuth();
+  const { isAuthenticated, loading: authLoading, getIdToken } = useFirebaseAuth();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -16,7 +16,8 @@ export const UserProfileProvider = ({ children }) => {
     
     const getToken = async () => {
       try {
-        return await getIdToken();
+        const token = await getIdToken();
+        return token;
       } catch (error) {
         console.error('Error getting token:', error);
         throw error;
@@ -36,20 +37,14 @@ export const UserProfileProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
-      // Create user profile from Firebase user data
-      const userProfile = {
-        id: firebaseUser.uid,
-        auth0Id: firebaseUser.uid, // Keep for backend compatibility
-        email: firebaseUser.email,
-        name: firebaseUser.displayName || firebaseUser.email,
-        picture: firebaseUser.photoURL,
-        emailVerified: firebaseUser.emailVerified,
-        nickname: firebaseUser.displayName,
-        createdAt: new Date(firebaseUser.metadata.creationTime),
-        updatedAt: new Date(firebaseUser.metadata.lastSignInTime)
-      };
+      // Call backend API to get/create user profile
+      const response = await apiClient.get('/users/me');
       
-      setProfile(userProfile);
+      if (response.data.success) {
+        setProfile(response.data.data);
+      } else {
+        throw new Error(response.data.message || 'Failed to load user profile');
+      }
     } catch (err) {
       // Handle specific error types
       if (err.response?.data?.error === 'DUPLICATE_EMAIL') {
@@ -60,7 +55,7 @@ export const UserProfileProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [isAuthenticated, apiClient, firebaseUser]);
+  }, [isAuthenticated, apiClient]);
 
   useEffect(() => {
     if (!authLoading) {

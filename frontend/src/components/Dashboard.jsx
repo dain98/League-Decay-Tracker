@@ -48,6 +48,7 @@ import EmailNotVerified from './EmailNotVerified';
 const DashboardContainer = styled(Container)(({ theme }) => ({
   marginTop: theme.spacing(10),
   marginBottom: theme.spacing(4),
+  paddingTop: theme.spacing(3),
   flex: 1,
 }));
 
@@ -101,7 +102,6 @@ const Dashboard = () => {
         url += `?fallbackName=${encodeURIComponent(fallbackNameParam)}`;
       }
       const response = await apiClient.get(url);
-      console.log('Accounts API response:', response.data.data); // Debug log
       setAccounts(response.data.data || []);
     } catch (error) {
       if (error.response && error.response.data && error.response.data.error === 'MISSING_NAME') {
@@ -296,6 +296,11 @@ const Dashboard = () => {
 
   const handleTitleClick = () => {
     // Refresh the dashboard data
+    loadData();
+  };
+
+  const handleRetry = () => {
+    setError(null);
     loadData();
   };
 

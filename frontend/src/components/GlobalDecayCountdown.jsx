@@ -5,6 +5,7 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 
 const CountdownContainer = styled(Paper)(({ theme, urgency }) => ({
   padding: theme.spacing(3),
+  marginTop: theme.spacing(3),
   marginBottom: theme.spacing(4),
   backgroundColor: urgency === 'high' 
     ? 'rgba(211, 47, 47, 0.15)' 

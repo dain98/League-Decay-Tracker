@@ -11,6 +11,7 @@ import { useDataDragon } from './hooks/useDataDragon.js';
 import TermsOfService from './components/TermsOfService';
 import Privacy from './components/Privacy';
 import Footer from './components/Footer';
+
 import './App.css';
 
 // Create a dark theme (Riot-inspired theme)
@@ -82,10 +83,10 @@ function App() {
                 </AuthGuard>
               } 
             />
-            <Route path="/" element={<Navigate to="/login" replace />} />
-          </Routes>
-          <Footer />
-        </div>
+                          <Route path="/" element={<Navigate to="/login" replace />} />
+            </Routes>
+            <Footer />
+          </div>
       </Router>
     </ThemeProvider>
   );

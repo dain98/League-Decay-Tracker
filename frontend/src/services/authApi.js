@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // API base URL - loaded from environment variables
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 /**
  * Creates an authenticated API client that automatically handles Auth0 tokens
