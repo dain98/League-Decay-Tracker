@@ -19,6 +19,7 @@ const Footer = () => {
         pb: 0,
         px: 2,
         mt: 'auto',
+        mb: 2,
       }}
     >
       <Container maxWidth="lg" sx={{ pb: 0 }}>
