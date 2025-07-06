@@ -208,6 +208,12 @@ const AccountList = ({ accounts, onDelete, onRefresh, onEdit, isLoading }) => {
     return `${account.tier} ${account.division} (${account.lp || 0} LP)`;
   };
 
+  const cleanRegion = (region) => {
+    if (!region) return '';
+    // Remove "1" from the end of region using regex
+    return region.replace(/1$/, '');
+  };
+
   if (accounts.length === 0) {
     return (
       <Paper sx={{ p: 4, textAlign: 'center' }}>
@@ -250,23 +256,62 @@ const AccountList = ({ accounts, onDelete, onRefresh, onEdit, isLoading }) => {
                       <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
                         {account.gameName}#{account.tagLine}
                       </Typography>
-                      {/* OP.GG Link */}
-                      <Box sx={{ mt: 0.5 }}>
-                        <Link
-                          href={`https://op.gg/lol/summoners/${(account.region || '').toLowerCase().replace(/1$/, '')}/${account.gameName}-${account.tagLine}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, p: 0 }}
-                          underline="none"
-                        >
-                          <img
-                            src="https://s-opgg-kit.op.gg/gnb/config/images/icon/93dc7e79dd2b842b7c9dd86acab04acf.svg?image=q_auto:good,f_webp,w_48,h_48"
-                            alt="OP.GG"
-                            width={18}
-                            height={18}
-                            style={{ display: 'block' }}
-                          />
-                        </Link>
+                      {/* External Links */}
+                      <Box sx={{ mt: 0.5, display: 'flex', gap: 1 }}>
+                        {/* OP.GG Link */}
+                        <Tooltip title="View on OP.GG">
+                          <Link
+                            href={`https://op.gg/lol/summoners/${cleanRegion(account.region).toLowerCase()}/${account.gameName}-${account.tagLine}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, p: 0 }}
+                            underline="none"
+                          >
+                            <img
+                              src="https://s-opgg-kit.op.gg/gnb/config/images/icon/93dc7e79dd2b842b7c9dd86acab04acf.svg?image=q_auto:good,f_webp,w_48,h_48"
+                              alt="OP.GG"
+                              width={18}
+                              height={18}
+                              style={{ display: 'block' }}
+                            />
+                          </Link>
+                        </Tooltip>
+                        {/* DeepLol Link */}
+                        <Tooltip title="View on DEEPLOL">
+                          <Link
+                            href={`https://www.deeplol.gg/summoner/${cleanRegion(account.region).toUpperCase()}/${account.gameName}-${account.tagLine}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, p: 0 }}
+                            underline="none"
+                          >
+                            <img
+                              src="https://www.deeplol.gg/favicon.ico"
+                              alt="DeepLol"
+                              width={18}
+                              height={18}
+                              style={{ display: 'block' }}
+                            />
+                          </Link>
+                        </Tooltip>
+                        {/* DPM.lol Link */}
+                        <Tooltip title="View on DPM.LOL">
+                          <Link
+                            href={`https://dpm.lol/${account.gameName}-${account.tagLine}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, p: 0 }}
+                            underline="none"
+                          >
+                            <img
+                              src="https://dpm.lol/favicon.ico"
+                              alt="DPM.lol"
+                              width={18}
+                              height={18}
+                              style={{ display: 'block' }}
+                            />
+                          </Link>
+                        </Tooltip>
                       </Box>
                     </Box>
                   </Box>

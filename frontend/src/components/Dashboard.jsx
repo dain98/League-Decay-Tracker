@@ -381,6 +381,7 @@ const Dashboard = () => {
             sx={{ 
               flexGrow: 1, 
               cursor: 'pointer',
+              fontWeight: 'bold',
               '&:hover': {
                 opacity: 0.8
               }

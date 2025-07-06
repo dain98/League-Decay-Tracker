@@ -11,6 +11,7 @@ import { useDataDragon } from './hooks/useDataDragon.js';
 import TermsOfService from './components/TermsOfService';
 import Privacy from './components/Privacy';
 import Footer from './components/Footer';
+import About from './components/About';
 
 import './App.css';
 
@@ -75,6 +76,7 @@ function App() {
             <Route path="/verify-email" element={<EmailNotVerified />} />
             <Route path="/terms" element={<TermsOfService />} />
             <Route path="/privacy" element={<Privacy />} />
+            <Route path="/about" element={<About />} />
             <Route 
               path="/dashboard" 
               element={
@@ -83,10 +85,10 @@ function App() {
                 </AuthGuard>
               } 
             />
-                          <Route path="/" element={<Navigate to="/login" replace />} />
-            </Routes>
-            <Footer />
-          </div>
+            <Route path="/" element={<Navigate to="/login" replace />} />
+          </Routes>
+          <Footer />
+        </div>
       </Router>
     </ThemeProvider>
   );

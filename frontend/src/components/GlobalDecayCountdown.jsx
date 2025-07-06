@@ -67,22 +67,20 @@ const GlobalDecayCountdown = ({ daysRemaining, accountName }) => {
         {urgency === 'high' && (
           <WarningAmberIcon color="error" sx={{ mr: 1 }} />
         )}
-        
         <Typography variant="h5" component="h2" color={urgency === 'high' ? 'error' : 'textPrimary'}>
           {urgency === 'high' 
-            ? 'Urgent: Ranked Decay Imminent!'
-            : 'Next Ranked Decay Countdown'}
+            ? 'Decay Approaching'
+            : 'Decay Countdown'}
         </Typography>
       </Box>
       
       <Typography variant="body1" gutterBottom>
-        {accountName} has <strong>{daysRemaining} {daysRemaining === 1 ? 'day' : 'days'}</strong> until ranked decay begins.
-        {urgency === 'high' && ' Play a game soon to prevent LP loss!'}
+        {accountName} has <strong>{daysRemaining} {daysRemaining === 1 ? 'day' : 'days'}</strong> left before decay. {urgency === 'high' && 'Play a game soon to refresh your timer!'}
       </Typography>
       
       <Box sx={{ mt: 2 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-          <Typography variant="caption">Decay Imminent</Typography>
+          <Typography variant="caption">Decay Approaching</Typography>
           <Typography variant="caption">Safe</Typography>
         </Box>
         <LinearProgress 

@@ -74,7 +74,7 @@ userSchema.statics.findOrCreateFromFirebase = async function(firebaseUser, fallb
     
     console.log('Looking for existing user with firebaseUid:', firebaseUid);
     let user = await this.findOne({ firebaseUid: firebaseUid });
-    console.log('Existing user found:', user ? 'Yes' : 'No');
+    console.log('Existing user found by firebaseUid:', user ? 'Yes' : 'No');
 
     // Robust extraction with fallback
     let name = firebaseUser.name || firebaseUser.nickname || firebaseUser.email || fallbackName || 'New User';
@@ -92,22 +92,58 @@ userSchema.statics.findOrCreateFromFirebase = async function(firebaseUser, fallb
     });
 
     if (!user) {
-      console.log('Creating new user...');
-      // Create new user with Firebase data
-      const userData = {
-        firebaseUid: firebaseUid,
-        email: email,
-        name: name,
-        picture: picture,
-        emailVerified: emailVerified,
-        nickname: nickname
-      };
-      console.log('Creating user with data:', userData);
-      
-      user = new this(userData);
-      console.log('User object created, saving...');
-      await user.save();
-      console.log('User saved successfully');
+      // Check if a user with this email already exists
+      if (email) {
+        console.log('Checking for existing user with email:', email);
+        const existingUserByEmail = await this.findOne({ email: email });
+        if (existingUserByEmail) {
+          console.log('User with email already exists, updating firebaseUid');
+          // Update the existing user's firebaseUid to link the accounts
+          existingUserByEmail.firebaseUid = firebaseUid;
+          // Optionally update other fields that might have changed
+          if (typeof emailVerified === 'boolean' && existingUserByEmail.emailVerified !== emailVerified) {
+            existingUserByEmail.emailVerified = emailVerified;
+          }
+          existingUserByEmail.updatedAt = new Date();
+          await existingUserByEmail.save();
+          user = existingUserByEmail;
+          console.log('Existing user updated with new firebaseUid');
+        } else {
+          console.log('Creating new user...');
+          // Create new user with Firebase data
+          const userData = {
+            firebaseUid: firebaseUid,
+            email: email,
+            name: name,
+            picture: picture,
+            emailVerified: emailVerified,
+            nickname: nickname
+          };
+          console.log('Creating user with data:', userData);
+          
+          user = new this(userData);
+          console.log('User object created, saving...');
+          await user.save();
+          console.log('User saved successfully');
+        }
+      } else {
+        console.log('Creating new user without email...');
+        // Create new user with Firebase data
+        const userData = {
+          firebaseUid: firebaseUid,
+          email: email,
+          name: name,
+          picture: picture,
+          emailVerified: emailVerified,
+          nickname: nickname
+        };
+        console.log('Creating user with data:', userData);
+        
+        user = new this(userData);
+        console.log('User object created, saving...');
+        await user.save();
+        console.log('User saved successfully');
+      }
     } else {
       console.log('Updating existing user...');
       // Do NOT overwrite user-editable fields with Firebase data

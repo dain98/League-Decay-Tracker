@@ -246,8 +246,8 @@ const Profile = ({ onClose }) => {
         </Toolbar>
       </AppBar>
       
-      <Container maxWidth="md" sx={{ mt: 10, mb: 4 }}>
-        <Box sx={{ display: 'flex', gap: 2 }}>
+      <Container maxWidth="md" sx={{ mt: 10, mb: 4, background: 'none', backgroundColor: 'transparent', boxShadow: 'none', backdropFilter: 'none' }}>
+        <Box sx={{ display: 'flex', gap: 2, background: 'none', backgroundColor: 'transparent', boxShadow: 'none', backdropFilter: 'none' }}>
           <IconButton
             onClick={onClose}
             sx={{ 

@@ -3,24 +3,26 @@ import {
   Box,
   Container,
   Typography,
-  Link,
-  Divider
+  Link
 } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
+import GitHubIcon from '@mui/icons-material/GitHub';
+
+const footerLinkSx = { display: 'flex', alignItems: 'center', fontSize: '0.875rem', p: 0 };
 
 const Footer = () => {
   return (
     <Box
       component="footer"
       sx={{
+        minHeight: 40,
         pt: 2,
-        pb: 5,
+        pb: 2,
         px: 2,
         mt: 'auto',
       }}
     >
       <Container maxWidth="lg" sx={{ pb: 2 }}>
-        <Divider sx={{ mb: 2 }} />
         <Box
           sx={{
             display: 'flex',
@@ -31,7 +33,7 @@ const Footer = () => {
           }}
         >
           <Typography variant="body2" color="text.secondary">
-            © {new Date().getFullYear()} League Decay Tracker. All rights reserved.
+            © {new Date().getFullYear()} LoL Decay Tracker. All rights reserved.
           </Typography>
           
           <Box
@@ -43,22 +45,45 @@ const Footer = () => {
             }}
           >
             <Link
-              component={RouterLink}
-              to="/privacy"
+              href="/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
               color="text.secondary"
               underline="hover"
-              sx={{ fontSize: '0.875rem' }}
+              sx={footerLinkSx}
             >
               Privacy Policy
             </Link>
             <Link
-              component={RouterLink}
-              to="/terms"
+              href="/terms"
+              target="_blank"
+              rel="noopener noreferrer"
               color="text.secondary"
               underline="hover"
-              sx={{ fontSize: '0.875rem' }}
+              sx={footerLinkSx}
             >
               Terms of Service
+            </Link>
+            <Link
+              href="/about"
+              target="_blank"
+              rel="noopener noreferrer"
+              color="text.secondary"
+              underline="hover"
+              sx={footerLinkSx}
+            >
+              About Us
+            </Link>
+            <Link
+              href="https://github.com/dain98/League-Decay-Tracker"
+              target="_blank"
+              rel="noopener noreferrer"
+              color="text.secondary"
+              underline="none"
+              aria-label="GitHub"
+              sx={footerLinkSx}
+            >
+              <GitHubIcon fontSize="medium" />
             </Link>
           </Box>
         </Box>
