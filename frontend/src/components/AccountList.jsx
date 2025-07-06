@@ -18,7 +18,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Button
+  Button,
+  Link
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -27,7 +28,7 @@ import { styled } from '@mui/material/styles';
 import { getSummonerIconUrlSync } from '../services/ddragon.js';
 
 // Styled components
-const StyledTableRow = styled(TableRow)(({ theme }) => ({
+const StyledTableRow = styled(TableRow)(() => ({
   '&:nth-of-type(odd)': {
     backgroundColor: 'rgba(10, 50, 60, 0.1)',
   },
@@ -36,8 +37,8 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
   },
 }));
 
-const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
-  backgroundColor: theme.palette.background.paper,
+const StyledTableContainer = styled(TableContainer)(() => ({
+  backgroundColor: '#fff',
 }));
 
 const DecayChip = styled(Chip)(({ theme, severity }) => ({
@@ -249,9 +250,24 @@ const AccountList = ({ accounts, onDelete, onRefresh, onEdit, isLoading }) => {
                       <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
                         {account.gameName}#{account.tagLine}
                       </Typography>
-                      <Typography variant="caption">
-                        {account.riotId}
-                      </Typography>
+                      {/* OP.GG Link */}
+                      <Box sx={{ mt: 0.5 }}>
+                        <Link
+                          href={`https://op.gg/lol/summoners/${(account.region || '').toLowerCase().replace(/1$/, '')}/${account.gameName}-${account.tagLine}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, p: 0 }}
+                          underline="none"
+                        >
+                          <img
+                            src="https://s-opgg-kit.op.gg/gnb/config/images/icon/93dc7e79dd2b842b7c9dd86acab04acf.svg?image=q_auto:good,f_webp,w_48,h_48"
+                            alt="OP.GG"
+                            width={18}
+                            height={18}
+                            style={{ display: 'block' }}
+                          />
+                        </Link>
+                      </Box>
                     </Box>
                   </Box>
                 </TableCell>
