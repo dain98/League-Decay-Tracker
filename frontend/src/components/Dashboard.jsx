@@ -47,8 +47,8 @@ import EmailNotVerified from './EmailNotVerified';
 // Styled components
 const DashboardContainer = styled(Container)(({ theme }) => ({
   marginTop: theme.spacing(10),
-  marginBottom: theme.spacing(4),
   paddingTop: theme.spacing(3),
+  paddingBottom: theme.spacing(8),
   flex: 1,
 }));
 

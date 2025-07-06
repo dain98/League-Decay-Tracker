@@ -13,12 +13,13 @@ const Footer = () => {
     <Box
       component="footer"
       sx={{
-        py: 3,
+        pt: 2,
+        pb: 5,
         px: 2,
         mt: 'auto',
       }}
     >
-      <Container maxWidth="lg">
+      <Container maxWidth="lg" sx={{ pb: 2 }}>
         <Divider sx={{ mb: 2 }} />
         <Box
           sx={{
