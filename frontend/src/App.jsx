@@ -1,17 +1,19 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 // Import components - make sure paths match your project structure
-import Login from './components/Login';
-import Dashboard from './components/Dashboard';
-import AuthGuard from './components/AuthGuard';
-import DuplicateEmailError from './components/DuplicateEmailError';
-import EmailNotVerified from './components/EmailNotVerified';
 import { useDataDragon } from './hooks/useDataDragon.js';
-import TermsOfService from './components/TermsOfService';
-import Privacy from './components/Privacy';
 import Footer from './components/Footer';
-import About from './components/About';
+
+// Lazy load major pages for code-splitting
+const Login = lazy(() => import('./components/Login'));
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const AuthGuard = lazy(() => import('./components/AuthGuard'));
+const DuplicateEmailError = lazy(() => import('./components/DuplicateEmailError'));
+const EmailNotVerified = lazy(() => import('./components/EmailNotVerified'));
+const TermsOfService = lazy(() => import('./components/TermsOfService'));
+const Privacy = lazy(() => import('./components/Privacy'));
+const About = lazy(() => import('./components/About'));
 
 import './App.css';
 
@@ -70,23 +72,25 @@ function App() {
       <CssBaseline />
       <Router>
         <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/duplicate-email" element={<DuplicateEmailError />} />
-            <Route path="/verify-email" element={<EmailNotVerified />} />
-            <Route path="/terms" element={<TermsOfService />} />
-            <Route path="/privacy" element={<Privacy />} />
-            <Route path="/about" element={<About />} />
-            <Route 
-              path="/dashboard" 
-              element={
-                <AuthGuard>
-                  <Dashboard />
-                </AuthGuard>
-              } 
-            />
-            <Route path="/" element={<Navigate to="/login" replace />} />
-          </Routes>
+          <Suspense fallback={<div style={{ color: '#fff', textAlign: 'center', marginTop: 64 }}>Loading...</div>}>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/duplicate-email" element={<DuplicateEmailError />} />
+              <Route path="/verify-email" element={<EmailNotVerified />} />
+              <Route path="/terms" element={<TermsOfService />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/about" element={<About />} />
+              <Route 
+                path="/dashboard" 
+                element={
+                  <AuthGuard>
+                    <Dashboard />
+                  </AuthGuard>
+                } 
+              />
+              <Route path="/" element={<Navigate to="/login" replace />} />
+            </Routes>
+          </Suspense>
           <Footer />
         </div>
       </Router>

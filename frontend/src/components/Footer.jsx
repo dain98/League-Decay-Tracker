@@ -8,40 +8,43 @@ import {
 import { Link as RouterLink } from 'react-router-dom';
 import GitHubIcon from '@mui/icons-material/GitHub';
 
-const footerLinkSx = { display: 'flex', alignItems: 'center', fontSize: '0.875rem', p: 0 };
+const footerLinkSx = { display: 'flex', alignItems: 'center', fontSize: '0.875rem', p: 0, lineHeight: 1, height: '40px' };
 
 const Footer = () => {
   return (
     <Box
       component="footer"
       sx={{
-        minHeight: 40,
         pt: 2,
-        pb: 2,
+        pb: 0,
         px: 2,
         mt: 'auto',
       }}
     >
-      <Container maxWidth="lg" sx={{ pb: 2 }}>
+      <Container maxWidth="lg" sx={{ pb: 0 }}>
         <Box
           sx={{
             display: 'flex',
             flexDirection: { xs: 'column', sm: 'row' },
             justifyContent: 'space-between',
             alignItems: 'center',
-            gap: 2
+            gap: 2,
+            minHeight: 40,
+            height: '40px',
           }}
         >
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', lineHeight: 1, height: '40px' }}>
             © {new Date().getFullYear()} LoL Decay Tracker. All rights reserved.
           </Typography>
           
           <Box
             sx={{
               display: 'flex',
+              alignItems: 'center',
               gap: 3,
               flexWrap: 'wrap',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              height: '40px',
             }}
           >
             <Link
@@ -83,7 +86,7 @@ const Footer = () => {
               aria-label="GitHub"
               sx={footerLinkSx}
             >
-              <GitHubIcon fontSize="medium" />
+              <GitHubIcon fontSize="medium" sx={{ verticalAlign: 'middle' }} />
             </Link>
           </Box>
         </Box>
