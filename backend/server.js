@@ -37,7 +37,8 @@ const corsOptions = {
       'http://localhost:5173',
       'https://f169-108-53-147-205.ngrok-free.app',
       'https://loldecay.up.railway.app',
-      'https://loldecay-backend.up.railway.app'
+      'https://loldecay-backend.up.railway.app',
+      'https://loldecay.dain.cafe'
     ];
     
     // Add environment variable origins if they exist
