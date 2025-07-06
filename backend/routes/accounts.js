@@ -767,6 +767,7 @@ router.post('/decay/check-matches', [
             const previousDecayDays = userAccount.remainingDecayDays;
             userAccount.remainingDecayDays = -1; // Set immunity for Emerald
             userAccount.isDecaying = false;
+            userAccount.lastUpdated = new Date();
             await userAccount.save();
             
             processedAccounts.push({
@@ -808,6 +809,7 @@ router.post('/decay/check-matches', [
                 userAccount.remainingDecayDays = Math.min(maxDecayDays, userAccount.remainingDecayDays + decayDaysToAdd);
               }
               userAccount.isDecaying = false;
+              userAccount.lastUpdated = new Date();
               await userAccount.save();
               processedAccounts.push({
                 id: userAccount._id,
@@ -821,6 +823,10 @@ router.post('/decay/check-matches', [
                 latestGameId: result.latestGameId
               });
             }
+          } else {
+            // Even if not updated, keep lastUpdated in sync with LeagueAccount
+            userAccount.lastUpdated = new Date();
+            await userAccount.save();
           }
         }
       } catch (accountError) {
