@@ -268,7 +268,7 @@ const AccountList = ({ accounts, onDelete, onRefresh, onEdit, isLoading }) => {
                             underline="none"
                           >
                             <img
-                              src="https://s-opgg-kit.op.gg/gnb/config/images/icon/93dc7e79dd2b842b7c9dd86acab04acf.svg?image=q_auto:good,f_webp,w_48,h_48"
+                              src="https://c-lol-web.op.gg/app-router/assets/images/meta/Icon-144.png"
                               alt="OP.GG"
                               width={18}
                               height={18}
