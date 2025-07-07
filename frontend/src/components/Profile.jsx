@@ -156,7 +156,12 @@ const Profile = ({ onClose }) => {
     setIsSubmitting(true);
     
     try {
-      await updateProfile(formData);
+      // Only include picture if it is a non-empty string
+      const payload = { name: formData.name };
+      if (typeof formData.picture === 'string' && formData.picture.trim() !== '') {
+        payload.picture = formData.picture.trim();
+      }
+      await updateProfile(payload);
       onClose();
     } catch (error) {
       console.error('Error updating profile:', error);

@@ -76,6 +76,10 @@ router.put('/me', [
   body('email').optional().isEmail().normalizeEmail()
 ], async (req, res) => {
   try {
+    // Sanitize picture: remove if undefined
+    if (req.body.picture === undefined) {
+      delete req.body.picture;
+    }
     // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
