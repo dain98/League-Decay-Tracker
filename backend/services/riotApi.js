@@ -406,6 +406,13 @@ export const processAccountMatchHistory = async (leagueAccount, userAccount = nu
           userAccount.remainingDecayDays = 28; // Reset to 28 days for Diamond
           console.log(`   🎯 ${leagueAccount.riotId} promoted from Emerald to Diamond - reset to 28 decay days`);
         }
+
+        // Check for Diamond promotion to Master: reset decay days to 14
+        // Only if the account was previously Diamond (not if it was already Master and just got updated)
+        if (leagueAccount.tier === 'MASTER' && previousTier === 'DIAMOND') {
+          userAccount.remainingDecayDays = 14; // Reset to 14 days for Master
+          console.log(`   🎯 ${leagueAccount.riotId} promoted from Diamond to Master - reset to 14 decay days`);
+        }
       }
     } catch (updateError) {
       console.warn(`   ⚠️  Could not update account details: ${updateError.message}`);
