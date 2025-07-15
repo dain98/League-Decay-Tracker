@@ -5,6 +5,12 @@ dotenv.config();
 
 const RIOT_API_KEY = process.env.RIOT_API_KEY;
 
+// Validate required environment variables
+if (!RIOT_API_KEY) {
+  console.error('RIOT_API_KEY environment variable is required');
+  throw new Error('Missing required environment variable: RIOT_API_KEY');
+}
+
 // Base URLs for different Riot API endpoints
 const BASE_URLS = {
   AMERICAS: 'https://americas.api.riotgames.com',
@@ -53,38 +59,56 @@ const RATE_LIMITS = [
 ];
 
 async function acquireRiotApiToken() {
-  while (true) {
+  let attempts = 0;
+  const maxAttempts = 100; // Prevent infinite loops
+  
+  while (attempts < maxAttempts) {
     const now = Date.now();
     let canProceed = true;
+    
     for (const limit of RATE_LIMITS) {
-      // Refill tokens
+      // Refill tokens based on time elapsed
       const elapsed = now - limit.lastRefill;
-      const refill = Math.floor(elapsed / limit.windowMs) * limit.max;
-      if (refill > 0) {
-        limit.tokens = Math.min(limit.max, limit.tokens + refill);
+      const tokensToAdd = Math.floor(elapsed / limit.windowMs) * limit.max;
+      
+      if (tokensToAdd > 0) {
+        limit.tokens = Math.min(limit.max, limit.tokens + tokensToAdd);
         limit.lastRefill = now;
       }
+      
       if (limit.tokens <= 0) {
         canProceed = false;
+        break;
       }
     }
+    
     if (canProceed) {
-      for (const limit of RATE_LIMITS) limit.tokens--;
+      // Consume one token from each limit
+      for (const limit of RATE_LIMITS) {
+        limit.tokens--;
+      }
       return;
     }
-    // Wait for the shortest window
-    const minWait = Math.min(...RATE_LIMITS.map(l => l.windowMs));
-    await sleep(minWait / 10);
+    
+    // Wait before retrying
+    await sleep(Math.min(1000, Math.min(...RATE_LIMITS.map(l => l.windowMs)) / 10));
+    attempts++;
   }
+  
+  throw new Error('Rate limit acquisition failed after maximum attempts');
 }
 
 async function riotApiRequest(requestFn) {
   let attempts = 0;
-  while (true) {
-    await acquireRiotApiToken();
+  const maxAttempts = 5;
+  
+  while (attempts < maxAttempts) {
     try {
+      await acquireRiotApiToken();
       return await requestFn();
     } catch (error) {
+      attempts++;
+      
       if (error.response?.status === 429) {
         // Check Retry-After header
         let wait = 2000;
@@ -96,14 +120,21 @@ async function riotApiRequest(requestFn) {
             wait = parsed * 1000;
           }
         }
+        
+        if (attempts >= maxAttempts) {
+          throw new Error(`Rate limit exceeded after ${maxAttempts} attempts`);
+        }
+        
         await sleep(wait);
-        attempts++;
-        if (attempts > 5) throw new Error('Rate limit exceeded after retries');
         continue;
       }
+      
+      // For non-429 errors, don't retry
       throw error;
     }
   }
+  
+  throw new Error(`API request failed after ${maxAttempts} attempts`);
 }
 
 // Get account information by game name and tag line

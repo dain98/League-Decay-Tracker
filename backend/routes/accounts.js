@@ -192,19 +192,27 @@ router.post('/', [
     const { gameName, tagLine, region, remainingDecayDays, isSpecial, isDecaying } = req.body;
 
     // Check if user already has this account
-    const existingUserAccount = await UserLeagueAccount.findOne({
-      userId: user._id,
-      'leagueAccountId.gameName': gameName,
-      'leagueAccountId.tagLine': tagLine,
-      'leagueAccountId.region': region.toUpperCase()
-    }).populate('leagueAccountId');
+    // First, find the LeagueAccount by riot ID
+    const existingLeagueAccount = await LeagueAccount.findOne({
+      gameName: gameName,
+      tagLine: tagLine,
+      region: region.toUpperCase()
+    });
 
-    if (existingUserAccount) {
-      return res.status(409).json({
-        success: false,
-        error: 'Account already exists',
-        message: 'This League account is already registered for your profile'
+    if (existingLeagueAccount) {
+      // Then check if this user already has this LeagueAccount linked
+      const existingUserAccount = await UserLeagueAccount.findOne({
+        userId: user._id,
+        leagueAccountId: existingLeagueAccount._id
       });
+
+      if (existingUserAccount) {
+        return res.status(409).json({
+          success: false,
+          error: 'Account already exists',
+          message: 'This League account is already registered for your profile'
+        });
+      }
     }
 
     // Get account info from Riot API
