@@ -735,13 +735,16 @@ router.post('/decay/check-matches', [
   authenticateApiKey
 ], async (req, res) => {
   try {
-    // Find all LeagueAccount documents
-    const allLeagueAccounts = await LeagueAccount.find({});
+    console.log('🔄 Starting match history check for all user accounts...');
+    
+    // Find all UserLeagueAccount documents that are active
+    const userAccounts = await UserLeagueAccount.find({ isActive: true })
+      .populate('leagueAccountId');
 
-    if (allLeagueAccounts.length === 0) {
+    if (userAccounts.length === 0) {
       return res.json({
         success: true,
-        message: 'No league accounts found to check',
+        message: 'No active user league accounts found to check',
         data: {
           processed: 0,
           accounts: []
@@ -749,102 +752,66 @@ router.post('/decay/check-matches', [
       });
     }
 
+    console.log(`Found ${userAccounts.length} active user accounts to process`);
+    
     const processedAccounts = [];
     const errors = [];
 
-    // Process each LeagueAccount
-    for (const leagueAccount of allLeagueAccounts) {
+    // Process each UserLeagueAccount individually
+    for (const userAccount of userAccounts) {
       try {
-        // Check match history ONCE per LeagueAccount
-        const result = await processAccountMatchHistory(leagueAccount);
-
-        // Find all linked UserLeagueAccounts
-        const userAccounts = await UserLeagueAccount.find({ leagueAccountId: leagueAccount._id });
+        const leagueAccount = userAccount.leagueAccountId;
         
-        for (const userAccount of userAccounts) {
-          // Handle Emerald immunity first
-          if (leagueAccount.tier === 'EMERALD' && userAccount.remainingDecayDays !== -1) {
-            const previousDecayDays = userAccount.remainingDecayDays;
-            userAccount.remainingDecayDays = -1; // Set immunity for Emerald
-            userAccount.isDecaying = false;
-            userAccount.lastUpdated = new Date();
-            await userAccount.save();
-            
-            processedAccounts.push({
-              id: userAccount._id,
-              riotId: leagueAccount.riotId,
-              tier: leagueAccount.tier,
-              division: leagueAccount.division,
-              gamesPlayed: 0,
-              previousDecayDays,
-              currentDecayDays: -1,
-              decayDaysAdded: 0,
-              latestGameId: result.latestGameId,
-              emeraldImmunity: true
-            });
-            
-            console.log(`🛡️  ${leagueAccount.riotId} is Emerald - set immunity (decay days: -1)`);
-            continue; // Skip regular decay processing for Emerald accounts
-          }
-          
-          // Handle regular decay processing only if result.updated is true
-          if (result.updated) {
-            // Increment remainingDecayDays as appropriate
-            let decayDaysToAdd = 0;
-            let maxDecayDays = 28;
-            if (leagueAccount.tier === 'DIAMOND') {
-              decayDaysToAdd = result.gamesPlayed * 7;
-              maxDecayDays = 28;
-            } else if (['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(leagueAccount.tier)) {
-              decayDaysToAdd = result.gamesPlayed * 1;
-              maxDecayDays = 14;
-            }
-            if (decayDaysToAdd > 0) {
-              const previousDecayDays = userAccount.remainingDecayDays;
-              if (previousDecayDays === -1) {
-                userAccount.remainingDecayDays = maxDecayDays;
-                userAccount.isSpecial = false;
-                userAccount.isDecaying = false;
-              } else {
-                userAccount.remainingDecayDays = Math.min(maxDecayDays, userAccount.remainingDecayDays + decayDaysToAdd);
-              }
-              userAccount.isDecaying = false;
-              userAccount.lastUpdated = new Date();
-              await userAccount.save();
-              processedAccounts.push({
-                id: userAccount._id,
-                riotId: leagueAccount.riotId,
-                tier: leagueAccount.tier,
-                division: leagueAccount.division,
-                gamesPlayed: result.gamesPlayed,
-                previousDecayDays,
-                currentDecayDays: userAccount.remainingDecayDays,
-                decayDaysAdded: decayDaysToAdd,
-                latestGameId: result.latestGameId
-              });
-            }
-          } else {
-            // Even if not updated, keep lastUpdated in sync with LeagueAccount
-            userAccount.lastUpdated = new Date();
-            await userAccount.save();
-          }
+        if (!leagueAccount) {
+          console.warn(`⚠️  UserLeagueAccount ${userAccount._id} has no associated LeagueAccount`);
+          continue;
         }
-      } catch (accountError) {
-        console.error(`   ❌ Error processing league account ${leagueAccount._id}:`, accountError.message);
-        errors.push({
-          accountId: leagueAccount._id,
+
+        console.log(`🔄 Processing: ${leagueAccount.riotId} (${leagueAccount.tier}${leagueAccount.division || ''})`);
+
+        // Call processAccountMatchHistory with BOTH parameters for proper decay logic
+        const result = await processAccountMatchHistory(leagueAccount, userAccount);
+
+        // Add to processed accounts list
+        processedAccounts.push({
+          id: userAccount._id,
           riotId: leagueAccount.riotId,
+          tier: leagueAccount.tier,
+          division: leagueAccount.division,
+          gamesPlayed: result.gamesPlayed || 0,
+          previousDecayDays: result.previousDecayDays || userAccount.remainingDecayDays,
+          currentDecayDays: userAccount.remainingDecayDays,
+          decayDaysAdded: result.decayDaysAdded || 0,
+          latestGameId: result.latestGameId || leagueAccount.lastSoloDuoGameId,
+          updated: result.updated || false,
+          isDecaying: userAccount.isDecaying,
+          isSpecial: userAccount.isSpecial,
+          rankUpdated: result.rankUpdated || false
+        });
+
+        console.log(`   ✅ ${leagueAccount.riotId} processed - Games: ${result.gamesPlayed || 0}, Decay: ${userAccount.remainingDecayDays}`);
+
+      } catch (accountError) {
+        console.error(`   ❌ Error processing user account ${userAccount._id}:`, accountError.message);
+        
+        const leagueAccount = userAccount.leagueAccountId;
+        errors.push({
+          userAccountId: userAccount._id,
+          leagueAccountId: leagueAccount?._id,
+          riotId: leagueAccount?.riotId || 'Unknown',
           error: accountError.message
         });
       }
     }
+
+    console.log(`🎉 Match history check completed - Processed: ${processedAccounts.length}, Errors: ${errors.length}`);
 
     res.json({
       success: true,
       message: `Match history check completed for ${processedAccounts.length} user accounts`,
       data: {
         processed: processedAccounts.length,
-        totalFound: allLeagueAccounts.length,
+        totalFound: userAccounts.length,
         accounts: processedAccounts,
         errors: errors.length > 0 ? errors : undefined
       }
