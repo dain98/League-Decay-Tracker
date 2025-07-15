@@ -47,15 +47,15 @@ class CronManager {
     startDecayJob() {
         // Define region-specific decay schedules
         const regionSchedules = [
-            { region: 'na1', timezone: 'America/Los_Angeles', schedule: '0 0 * * *' },
-            { region: 'kr', timezone: 'Asia/Seoul', schedule: '0 0 * * *' },
-            { region: 'euw1', timezone: 'Europe/London', schedule: '0 0 * * *' }
+            { region: 'na1', timezone: 'America/Los_Angeles', schedule: '39 0 * * *' },
+            { region: 'kr', timezone: 'Asia/Seoul', schedule: '39 0 * * *' },
+            { region: 'euw1', timezone: 'Europe/London', schedule: '39 0 * * *' }
         ];
 
         // Create separate cron jobs for each region
         this.decayJobs = regionSchedules.map(({ region, timezone, schedule }) => {
             const job = cron.schedule(schedule, async () => {
-                console.log(`Running daily decay processing for ${region} at midnight ${timezone}...`);
+                console.log(`Running daily decay processing for ${region} at 12:39 AM ${timezone}...`);
                 try {
                     await this.processDecayForRegion(region);
                     console.log(`Daily decay processing for ${region} completed successfully`);
@@ -67,15 +67,15 @@ class CronManager {
                 timezone: timezone
             });
             
-            console.log(`Decay job scheduled for ${region} at 00:00 ${timezone} daily`);
+            console.log(`Decay job scheduled for ${region} at 00:39 ${timezone} daily`);
             return { region, job };
         });
     }
 
     // Start the match history checking job
     startMatchHistoryJob() {
-        // Run every 30 minutes
-        this.matchHistoryJob = cron.schedule('*/30 * * * *', async () => {
+        // Run every hour
+        this.matchHistoryJob = cron.schedule('0 * * * *', async () => {
             console.log('Running match history check...');
             try {
                 await this.processMatchHistory();
@@ -88,7 +88,7 @@ class CronManager {
             timezone: "UTC"
         });
         
-        console.log('Match history job scheduled for every 30 minutes');
+        console.log('Match history job scheduled for every hour');
     }
 
     // Process decay for a specific region

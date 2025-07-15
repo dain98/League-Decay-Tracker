@@ -735,13 +735,14 @@ router.post('/decay/check-matches', [
   authenticateApiKey
 ], async (req, res) => {
   try {
-    console.log('🔄 Starting match history check for all user accounts...');
+    const startTime = new Date();
     
     // Find all UserLeagueAccount documents that are active
     const userAccounts = await UserLeagueAccount.find({ isActive: true })
       .populate('leagueAccountId');
 
     if (userAccounts.length === 0) {
+      console.log('🔄 CRON MATCH HISTORY: No active user league accounts found to check');
       return res.json({
         success: true,
         message: 'No active user league accounts found to check',
@@ -752,10 +753,9 @@ router.post('/decay/check-matches', [
       });
     }
 
-    console.log(`Found ${userAccounts.length} active user accounts to process`);
-    
     const processedAccounts = [];
     const errors = [];
+    const accountSummaries = [];
 
     // Process each UserLeagueAccount individually
     for (const userAccount of userAccounts) {
@@ -763,11 +763,14 @@ router.post('/decay/check-matches', [
         const leagueAccount = userAccount.leagueAccountId;
         
         if (!leagueAccount) {
-          console.warn(`⚠️  UserLeagueAccount ${userAccount._id} has no associated LeagueAccount`);
+          errors.push({
+            userAccountId: userAccount._id,
+            leagueAccountId: null,
+            riotId: 'Unknown',
+            error: 'No associated LeagueAccount'
+          });
           continue;
         }
-
-        console.log(`🔄 Processing: ${leagueAccount.riotId} (${leagueAccount.tier}${leagueAccount.division || ''})`);
 
         // Call processAccountMatchHistory with BOTH parameters for proper decay logic
         const result = await processAccountMatchHistory(leagueAccount, userAccount);
@@ -789,11 +792,16 @@ router.post('/decay/check-matches', [
           rankUpdated: result.rankUpdated || false
         });
 
-        console.log(`   ✅ ${leagueAccount.riotId} processed - Games: ${result.gamesPlayed || 0}, Decay: ${userAccount.remainingDecayDays}`);
+        // Add to summary for consolidated logging
+        accountSummaries.push({
+          riotId: leagueAccount.riotId,
+          tier: `${leagueAccount.tier}${leagueAccount.division || ''}`,
+          games: result.gamesPlayed || 0,
+          decay: userAccount.remainingDecayDays,
+          updated: result.updated || false
+        });
 
       } catch (accountError) {
-        console.error(`   ❌ Error processing user account ${userAccount._id}:`, accountError.message);
-        
         const leagueAccount = userAccount.leagueAccountId;
         errors.push({
           userAccountId: userAccount._id,
@@ -804,7 +812,25 @@ router.post('/decay/check-matches', [
       }
     }
 
-    console.log(`🎉 Match history check completed - Processed: ${processedAccounts.length}, Errors: ${errors.length}`);
+    // Create consolidated log message
+    const endTime = new Date();
+    const duration = Math.round((endTime - startTime) / 1000);
+    const updatedAccounts = accountSummaries.filter(acc => acc.updated);
+    const gamesPlayedTotal = accountSummaries.reduce((sum, acc) => sum + acc.games, 0);
+    
+    const logMessage = [
+      `🔄 CRON MATCH HISTORY COMPLETED`,
+      `Time: ${endTime.toISOString()}`,
+      `Duration: ${duration}s`,
+      `Processed: ${processedAccounts.length}/${userAccounts.length}`,
+      `Updated: ${updatedAccounts.length}`,
+      `Total Games: ${gamesPlayedTotal}`,
+      `Errors: ${errors.length}`,
+      updatedAccounts.length > 0 ? `Updated Accounts: ${updatedAccounts.map(acc => `${acc.riotId}(${acc.tier}:${acc.games}g→${acc.decay}d)`).join(', ')}` : '',
+      errors.length > 0 ? `Errors: ${errors.map(e => `${e.riotId}(${e.error})`).join(', ')}` : ''
+    ].filter(Boolean).join(' | ');
+
+    console.log(logMessage);
 
     res.json({
       success: true,
@@ -818,7 +844,7 @@ router.post('/decay/check-matches', [
     });
 
   } catch (error) {
-    console.error('Error checking match history:', error);
+    console.error(`🔄 CRON MATCH HISTORY ERROR | Time: ${new Date().toISOString()} | Error: ${error.message}`);
     res.status(500).json({
       success: false,
       error: 'Failed to check match history',
